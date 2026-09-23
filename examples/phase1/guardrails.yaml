@@ -1,0 +1,42 @@
+# Policy for the Phase 1 demo. Read top to bottom: first matching rule wins,
+# and anything no rule matches is denied (defaults.decision).
+version: "0.1"
+
+defaults:
+  decision: deny
+  on_error: deny
+
+upstreams:
+  demo:
+    # Relative to where you run `shugo serve` (run from the repo root).
+    command: .venv/bin/python
+    args: ["examples/phase1/demo_tools_server.py"]
+    env: {}
+
+rules:
+  - id: reads-are-fine
+    description: Reading is always allowed.
+    match:
+      server: demo
+      tool: "read_*"
+    decision: allow
+
+  - id: no-deletes
+    description: Agents may never delete files.
+    match:
+      server: demo
+      tool: delete_file
+    decision: deny
+    reason: Deleting files is prohibited for autonomous agents.
+    controls: [OWASP-LLM06]
+
+  - id: shell-needs-a-human
+    description: Shell commands need a person to approve them.
+    match:
+      server: demo
+      tool: bash
+    decision: escalate
+    approval:
+      channel: cli
+      timeout_seconds: 5
+      on_timeout: deny
