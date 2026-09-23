@@ -45,7 +45,7 @@ def _build_server(
         return merged
 
     @server.call_tool()
-    async def _call(qualified: str, arguments: dict[str, Any]) -> list[mcp_types.ContentBlock]:
+    async def _call(qualified: str, arguments: dict[str, Any]) -> mcp_types.CallToolResult:
         if paths.halt_sentinel().exists():
             raise _mcp_error("SHUGO halted — all calls denied until unhalt")
 
@@ -117,7 +117,10 @@ def _build_server(
         except Exception as e:
             raise _mcp_error(f"upstream {server_name} failed: {e}")
 
-        return list(result.content)
+        # Return the whole result, not just .content: tools that declare an
+        # outputSchema also send structuredContent, and dropping it makes the
+        # MCP server reject the response.
+        return result
 
     return server
 

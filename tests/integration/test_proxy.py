@@ -172,3 +172,45 @@ async def test_unknown_upstream_errors(isolated_home):
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
+
+
+class _StructuredUpstream(FakeUpstream):
+    """Upstream whose tool declares an outputSchema, like FastMCP tools do."""
+
+    async def list_tools(self):
+        from mcp import types as mcp_types
+
+        return [
+            mcp_types.Tool(
+                name="get_repo",
+                inputSchema={"type": "object", "properties": {}},
+                outputSchema={
+                    "type": "object",
+                    "properties": {"result": {"type": "string"}},
+                    "required": ["result"],
+                },
+            )
+        ]
+
+    async def call_tool(self, tool, arguments):
+        from mcp import types as mcp_types
+
+        self.calls.append((tool, arguments))
+        return mcp_types.CallToolResult(
+            content=[mcp_types.TextContent(type="text", text="octocat/hello")],
+            structuredContent={"result": "octocat/hello"},
+        )
+
+
+@pytest.mark.anyio
+async def test_allow_path_preserves_structured_content(isolated_home):
+    up = _StructuredUpstream("gh")
+    cfg = _cfg([{"id": "r1", "match": {"tool": "get_*"}, "decision": "allow"}])
+
+    async def driver(session):
+        await session.list_tools()  # client caches outputSchema and validates against it
+        return await session.call_tool("gh__get_repo", {})
+
+    result = await _run_proxy_and_client(cfg, {"gh": up}, driver)
+    assert not result.isError, result.content
+    assert result.structuredContent == {"result": "octocat/hello"}
