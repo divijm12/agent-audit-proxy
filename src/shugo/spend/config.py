@@ -1,0 +1,37 @@
+"""spend.yaml: where to forward, who gets which budget, and what models cost."""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Literal, Optional
+
+import yaml
+from pydantic import BaseModel, Field
+
+from shugo import paths
+from shugo.spend.pricing import Price, default_prices
+
+
+class AgentBudget(BaseModel):
+    budget_usd: float = Field(ge=0)
+
+
+class SpendConfig(BaseModel):
+    upstream: str = "https://api.anthropic.com"
+    default_budget_usd: float = Field(default=1.0, ge=0)
+    agents: dict[str, AgentBudget] = {}
+    # A model missing from the price table can't be budgeted: refuse it ("deny")
+    # or charge it at the most expensive known rate ("max_price").
+    unknown_model: Literal["deny", "max_price"] = "deny"
+    prices: dict[str, Price] = {}  # overrides / additions to the built-in table
+    db_path: Optional[str] = None  # default: $SHUGO_HOME/spend.db
+
+    def all_prices(self) -> dict[str, Price]:
+        return {**default_prices(), **self.prices}
+
+    def ledger_path(self) -> Path:
+        return Path(self.db_path) if self.db_path else paths.shugo_home() / "spend.db"
+
+
+def load_spend_config(path: str | Path) -> SpendConfig:
+    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    return SpendConfig.model_validate(raw)

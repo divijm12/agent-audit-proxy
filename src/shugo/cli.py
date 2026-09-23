@@ -18,6 +18,9 @@ app = typer.Typer(
 audit_app = typer.Typer(help="Inspect and verify the audit log.", no_args_is_help=True)
 app.add_typer(audit_app, name="audit")
 
+spend_app = typer.Typer(help="Spend proxy: per-agent budgets for Anthropic API calls.", no_args_is_help=True)
+app.add_typer(spend_app, name="spend")
+
 console = Console()
 
 
@@ -105,6 +108,40 @@ def audit_verify() -> None:
     from shugo.commands import audit as _cmd
 
     _cmd.run_verify(console=console)
+
+
+_SPEND_CONFIG = typer.Option(Path("spend.yaml"), "--config", "-c", help="Path to spend.yaml")
+
+
+@spend_app.command("serve")
+def spend_serve(
+    config: Path = _SPEND_CONFIG,
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8787, "--port", "-p"),
+) -> None:
+    """Run the spend proxy in front of the Anthropic API."""
+    from shugo.commands import spend as _cmd
+
+    _cmd.run_serve(config=config, host=host, port=port, console=console)
+
+
+@spend_app.command("status")
+def spend_status(config: Path = _SPEND_CONFIG) -> None:
+    """Show each agent's spend against its budget."""
+    from shugo.commands import spend as _cmd
+
+    _cmd.run_status(config=config, console=console)
+
+
+@spend_app.command("reset")
+def spend_reset(
+    agent_id: str = typer.Argument(..., help="Agent to reset to $0"),
+    config: Path = _SPEND_CONFIG,
+) -> None:
+    """Zero an agent's recorded spend."""
+    from shugo.commands import spend as _cmd
+
+    _cmd.run_reset(agent_id=agent_id, config=config, console=console)
 
 
 @app.command()
