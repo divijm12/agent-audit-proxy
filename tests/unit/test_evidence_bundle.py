@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import yaml
@@ -6,6 +7,10 @@ import yaml
 from shugo.audit.log import AuditLog
 from shugo.errors import ShugoError
 from shugo.evidence import generate_bundle, list_frameworks, load_framework
+
+
+def _days_ago(n):
+    return (datetime.now(timezone.utc) - timedelta(days=n)).isoformat(timespec="seconds")
 
 
 def test_list_frameworks_includes_all_four():
@@ -60,7 +65,7 @@ def _seed_audit(home):
             decision="deny",
             matched_rule_id="no-force-push",
             controls=["OWASP-LLM06"],
-            ts="2026-07-25T00:00:00+00:00",
+            ts=_days_ago(5),
         )
     )
     log.append(
@@ -73,7 +78,7 @@ def _seed_audit(home):
             matched_rule_id="write-needs-approval",
             approver="alice",
             controls=["EU-AI-ACT-ART-14"],
-            ts="2026-07-29T00:00:00+00:00",
+            ts=_days_ago(1),
         )
     )
     # Stale entry — should be outside the window.
