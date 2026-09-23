@@ -52,4 +52,4 @@ file) and write to the same audit log.
 4. **Export + evals.** `/export?hours=72` markdown report; runaway, policy
    (incl. `args_match`), and tamper evals; proxy-overhead p50/p95.
 5. **Deploy + README.** Dockerfile, Fly.io; README with real numbers; **one real
-   Claude Haiku 4.5 run capped at $1 total** to prove the budget stop; then make the repo public.
+   Claude Haiku 4.5 run capped at $0.30 total** (agent budget set below that, e.g. $0.10) to prove the budget stop; then make the repo public.
