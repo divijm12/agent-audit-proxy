@@ -1,4 +1,5 @@
 import json
+import re
 
 from typer.testing import CliRunner
 
@@ -6,6 +7,11 @@ from shugo.audit.log import AuditLog
 from shugo.cli import app
 
 runner = CliRunner()
+
+
+def _plain(output: str) -> str:
+    """CLI output without color codes or line wrapping (both vary by terminal)."""
+    return " ".join(re.sub(r"\x1b\[[0-9;]*m", "", output).split())
 
 
 def _seed_log(tmp_path, n=3):
@@ -42,7 +48,7 @@ def test_audit_verify_ok(tmp_path, monkeypatch):
     result = runner.invoke(app, ["audit", "verify"])
     assert result.exit_code == 0
     assert "OK" in result.output
-    assert "2 entries" in result.output
+    assert "2 entries" in _plain(result.output)
 
 
 def test_audit_verify_fails_on_tamper(tmp_path, monkeypatch):

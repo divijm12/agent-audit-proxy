@@ -30,6 +30,3 @@ OK examples/phase1/.shugo-home/audit.log: 3 entries verified
 To approve the `bash` call instead of letting it time out, run
 `SHUGO_HOME=examples/phase1/.shugo-home .venv/bin/shugo approve --watch` in a second
 terminal first (and raise `timeout_seconds` in `guardrails.yaml`).
-
-If your shell sets `FORCE_COLOR`, prefix commands with `env -u FORCE_COLOR` — one
-upstream test string-matches CLI output and breaks on color codes.

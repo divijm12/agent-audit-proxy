@@ -68,11 +68,37 @@ process (including our future spend proxy and dashboard) can flip it.
    for "the last 30 days". Correct in July, broken by September. **Lesson:** tests
    that depend on today's date should compute dates relative to now.
 3. **An environment gotcha.** Our shell sets `FORCE_COLOR`, which makes the CLI
-   print color codes, which broke a test that compared text. Not a bug in the
-   product, just something to know.
+   print color codes, which broke a test that compared text. (Fixed properly in
+   the CI entry below.)
 
 ### What shugo *can't* do (and why Phase 2 exists)
 
 shugo sees tool calls, never model calls. It has no idea how many tokens an agent
 used or what it cost. So a spending limit can't live inside shugo — it needs a
 second, small proxy in front of the Anthropic API. See `docs/plan.md`.
+
+---
+
+## CI — why GitHub emailed "workflow run failed" (2026-09-22)
+
+**CI** ("continuous integration") is GitHub re-running the test suite on fresh
+Linux, macOS and Windows machines every time we push. It came with shugo in
+`.github/workflows/ci.yml`. Our first push failed on all 9 machines.
+
+1. **It never got as far as testing.** The setup step caches downloads keyed on
+   a `uv.lock` file (the exact version of every dependency), and shugo never
+   committed one — so setup crashed. shugo's own CI had been red since July 30
+   for the same reason. The workflow also installed packages into the wrong
+   Python and skipped the test plugins. Fix: commit `uv.lock`, then
+   `uv sync --locked --extra dev` builds an identical environment on every
+   machine. **Lesson:** a lock file is what makes "works on my machine" also
+   work on theirs.
+2. **Then only Linux failed.** A test checked the CLI printed `2 entries`, but
+   the CLI wraps long lines to fit the terminal, and on Linux the temp-folder
+   path was just long enough to wrap between "2" and "entries". Same test that
+   broke locally on color codes. Fix: the test now strips color codes and line
+   breaks before comparing. **Lesson:** test what a command *means*, not exactly
+   how it's laid out on screen — layout depends on the terminal.
+3. **Reading the email.** `gh run list` first showed shugo's July runs, because
+   our repo has two remotes and `gh` picked `upstream`. Use
+   `gh run list -R divijm12/agent-audit-proxy` to see ours.
