@@ -16,10 +16,11 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
-from shugo import paths
+from shugo import killswitch, paths
 from shugo.audit.log import AuditLog
 from shugo.spend.budget import BudgetExceeded, BudgetStore, Reservation
 from shugo.spend.config import SpendConfig
+from shugo.spend.dashboard import build_router
 from shugo.spend.pricing import Price, PriceTable, cost_of_usage
 from shugo.spend.sse import UsageTracker
 
@@ -65,9 +66,10 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
 
     app = FastAPI(title="shugo spend proxy", lifespan=lifespan)
     app.state.store = store
+    app.include_router(build_router(store))
 
     def halted() -> bool:
-        return paths.halt_sentinel().exists()
+        return killswitch.is_halted()
 
     def record(req_id: str, agent: str, meta: dict[str, Any], decision: str, *,
                rule: str | None = None, reason: str | None = None, **extra: Any) -> None:

@@ -180,3 +180,53 @@ When an agent is over budget the proxy answers exactly like Anthropic would for
 a billing problem: HTTP **402** `billing_error`. The Anthropic SDK turns that
 into a normal exception and, importantly, **doesn't retry it** (it retries 429s
 and 5xx errors). A "stop" that the client automatically retries isn't a stop.
+
+---
+
+## Phase 3 — The dashboard and the big red button (2026-09-23)
+
+### What it is
+
+A single web page, `http://127.0.0.1:8787/dashboard`, served by the spend
+proxy. No React, no build step: one HTML file with a little JavaScript that
+asks the proxy "what's going on?" (`GET /api/state`) every 1.5 seconds and
+redraws. The answer contains three things: is everything stopped, how much
+has each agent spent, and the last 50 audit entries.
+
+### One button, both proxies
+
+The STOP button creates the `HALT` file; RESUME deletes it. The tool guard and
+the spend proxy both check that file before every single call, so one click
+freezes tool calls *and* model calls, and even cuts off a reply that's already
+streaming. We moved the halt logic into `killswitch.py` so the button and the
+`shugo halt` command share it, and so every STOP/RESUME is written to the audit
+log with who did it. For an auditor, "when were the agents frozen, and by whom?"
+matters as much as "what did they do?"
+
+### Two web-security ideas worth knowing
+
+1. **Never paste untrusted text into a page as HTML.** Audit rows contain text an
+   agent chose (its name, a reason). If an agent named itself
+   `<script>…</script>` and we inserted it as HTML, that script would run in your
+   browser. So the page only ever uses `textContent`, which shows text as text.
+   A test checks the page never uses the HTML-inserting alternative.
+2. **Cross-site request forgery (CSRF).** Any website you visit can make your
+   browser send a request to `127.0.0.1:8787`. So a random page could "press"
+   STOP for you. Fix: the buttons send a custom header (`x-shugo-dashboard: 1`).
+   Browsers refuse to let another site add custom headers without asking our
+   server first, and our server never says yes.
+
+### Checking it like a user would
+
+Tests proved the API worked, but a page has to be *seen*. Opening it in a real
+browser showed two things tests couldn't: an agent that couldn't afford its next
+call still looked "yellow, 90%", not blocked; and agent names wrapped onto two
+lines. Both fixed: the ledger now reports `blocked` (can't afford a call like its
+last one), and the bar turns red with the word **blocked**.
+
+### A small operations lesson
+
+Stopping the demo with a plain `kill` left its two servers running in the
+background, still holding their ports, so the next run quietly talked to the
+*old* code. Python only runs `finally:` clean-up on Ctrl+C by default, not on
+`kill`. The demo scripts now turn `kill` into a normal exit so they clean up.

@@ -10,7 +10,16 @@ def _store(**limits):
 def test_unknown_agent_gets_default_limit():
     s = _store()
     s.settle(s.reserve("new-bot", 0.0), 0.25)
-    assert s.status() == [{"agent_id": "new-bot", "total_spent": 0.25, "budget_limit": 1.0, "reserved": 0.0}]
+    assert s.status() == [{"agent_id": "new-bot", "total_spent": 0.25, "budget_limit": 1.0, "reserved": 0.0,
+                           "last_call_cost": 0.25, "blocked": False}]
+
+
+def test_status_flags_an_agent_that_cannot_afford_its_next_call():
+    s = _store(bot=0.10)
+    for _ in range(3):
+        s.settle(s.reserve("bot", 0.0), 0.03)
+    (row,) = s.status()
+    assert row["total_spent"] < row["budget_limit"] and row["blocked"] is True
 
 
 def test_blocks_once_spent_reaches_limit():

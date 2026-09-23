@@ -105,12 +105,16 @@ class BudgetStore:
             rows = self._db.execute(
                 "SELECT agent_id, total_spent, budget_limit FROM agents ORDER BY agent_id"
             ).fetchall()
-            return [
-                {
+            out = []
+            for a, spent, limit in rows:
+                last = self._last_cost.get(a, 0.0)
+                out.append({
                     "agent_id": a,
                     "total_spent": spent,
                     "budget_limit": limit,
                     "reserved": self._reserved.get(a, 0.0),
-                }
-                for a, spent, limit in rows
-            ]
+                    "last_call_cost": last,
+                    # Can't afford even one more call like its last one.
+                    "blocked": spent >= limit or spent + last > limit,
+                })
+            return out

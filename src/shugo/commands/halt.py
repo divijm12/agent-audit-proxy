@@ -1,28 +1,21 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from rich.console import Console
 
-from shugo import paths
+from shugo import killswitch, paths
 
 
 def run_halt(console: Console) -> int:
-    paths.ensure_layout()
-    sentinel = paths.halt_sentinel()
-    sentinel.write_text(
-        f"halted-at: {datetime.now(timezone.utc).isoformat(timespec='seconds')}\n",
-        encoding="utf-8",
-    )
-    console.print(f"[red]HALT[/red] set at {sentinel} — all calls will be denied")
+    if not killswitch.halt(by="cli"):
+        console.print(f"[dim]already halted ({paths.halt_sentinel()})[/dim]")
+        return 0
+    console.print(f"[red]HALT[/red] set at {paths.halt_sentinel()} — all calls will be denied")
     return 0
 
 
 def run_unhalt(console: Console) -> int:
-    sentinel = paths.halt_sentinel()
-    if sentinel.exists():
-        sentinel.unlink()
-        console.print(f"[green]cleared[/green] {sentinel}")
+    if killswitch.resume(by="cli"):
+        console.print(f"[green]cleared[/green] {paths.halt_sentinel()}")
     else:
-        console.print(f"[dim]no halt sentinel at {sentinel}[/dim]")
+        console.print(f"[dim]no halt sentinel at {paths.halt_sentinel()}[/dim]")
     return 0

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Audit Proxy</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e4e4df;
+    --ok: #1f7a4a; --warn: #b7791f; --bad: #c0392b; --bar: #2f6fdd; --btn-text: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --panel: #1e1e1c; --text: #ecece8; --muted: #9a9a93; --line: #33332f;
+      --ok: #4cc38a; --warn: #e0a84b; --bad: #ff6b5b; --bar: #6f9cff; --btn-text: #141413;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 18px; }
+  .status { font-weight: 600; }
+  .status.running { color: var(--ok); } .status.halted { color: var(--bad); }
+  #toggle { border: 0; border-radius: 12px; padding: 18px 34px; font-size: 20px; font-weight: 800;
+            letter-spacing: .04em; cursor: pointer; color: var(--btn-text); background: var(--bad);
+            min-width: 180px; }
+  #toggle.resume { background: var(--ok); }
+  #toggle:disabled { opacity: .6; cursor: wait; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .agent { display: grid; grid-template-columns: minmax(110px, 180px) 1fr auto; gap: 12px; align-items: center; padding: 6px 0; }
+  .agent-name { font-weight: 600; overflow-wrap: anywhere; }
+  .track { height: 14px; background: var(--line); border-radius: 7px; overflow: hidden; }
+  .fill { height: 100%; background: var(--bar); border-radius: 7px; transition: width .3s; }
+  .fill.warn { background: var(--warn); } .fill.bad { background: var(--bad); }
+  .amount { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .amount.blocked { color: var(--bad); font-weight: 600; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; }
+  td.nw { white-space: nowrap; }
+  .d-allow { color: var(--ok); } .d-deny { color: var(--bad); } .d-escalate, .d-halt, .d-resume { color: var(--warn); }
+  .empty { color: var(--muted); }
+  @media (max-width: 600px) { .agent { grid-template-columns: 1fr auto; } .track { grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Agent Audit Proxy</h1>
+      <div class="sub">Agents: <span id="status" class="status">loading…</span> <span id="since"></span></div>
+    </div>
+    <button id="toggle" disabled>STOP</button>
+  </header>
+
+  <section class="panel">
+    <h2>Spend by agent</h2>
+    <div id="agents"><div class="empty">No agent has made a call yet.</div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Last 50 audit entries (newest first)</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Time (UTC)</th><th>Agent</th><th>Action</th><th>Decision</th><th>Rule</th><th>Cost</th><th>Reason</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+// Everything shown here can include text chosen by an agent, so it is only ever
+// inserted with textContent, so it can never run as HTML or script.
+const $ = (id) => document.getElementById(id);
+const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+const money = (x) => "$" + Number(x || 0).toFixed(4);
+let halted = false;
+
+function render(s) {
+  halted = !!s.halted;
+  $("status").textContent = halted ? "STOPPED" : "running";
+  $("status").className = "status " + (halted ? "halted" : "running");
+  $("since").textContent = halted && s.halted_at ? `since ${s.halted_at} (by ${s.by || "?"})` : "";
+  const btn = $("toggle");
+  btn.textContent = halted ? "RESUME" : "STOP";
+  btn.className = halted ? "resume" : "";
+  btn.disabled = false;
+
+  const agents = $("agents");
+  agents.replaceChildren();
+  if (!s.agents.length) agents.append(el("div", "No agent has made a call yet.", "empty"));
+  for (const a of s.agents) {
+    const used = a.budget_limit > 0 ? a.total_spent / a.budget_limit : 1;
+    const fill = el("div", null, "fill" + (a.blocked ? " bad" : used >= 0.8 ? " warn" : ""));
+    fill.style.width = Math.min(100, used * 100).toFixed(1) + "%";
+    const track = el("div", null, "track"); track.append(fill);
+    const row = el("div", null, "agent");
+    row.append(el("div", a.agent_id, "agent-name"), track,
+               el("div", `${money(a.total_spent)} of $${Number(a.budget_limit).toFixed(2)} (${Math.round(used * 100)}%)` +
+                         (a.blocked ? " · blocked" : ""), "amount" + (a.blocked ? " blocked" : "")));
+    agents.append(row);
+  }
+
+  const rows = $("rows");
+  rows.replaceChildren();
+  if (!s.audit.length) {
+    const tr = el("tr"); const td = el("td", "The audit log is empty.", "empty"); td.colSpan = 7; tr.append(td); rows.append(tr);
+  }
+  for (const e of s.audit) {
+    const tr = el("tr");
+    tr.append(
+      el("td", (e.ts || "").replace("T", " ").slice(0, 19), "num nw"),
+      el("td", e.agent_id || "—", "nw"),
+      el("td", `${e.server}::${e.tool}`, "nw"),
+      el("td", e.decision, "nw d-" + e.decision),
+      el("td", e.matched_rule_id || "—", "nw"),
+      el("td", e.cost_usd != null ? money(e.cost_usd) : "—", "num nw"),
+      el("td", e.reason || ""),
+    );
+    rows.append(tr);
+  }
+}
+
+async function refresh() {
+  try { render(await (await fetch("/api/state")).json()); }
+  catch { $("status").textContent = "proxy unreachable"; $("status").className = "status halted"; }
+}
+
+$("toggle").addEventListener("click", async () => {
+  $("toggle").disabled = true;
+  const res = await fetch(halted ? "/api/resume" : "/api/stop", { method: "POST", headers: { "x-shugo-dashboard": "1" } });
+  render(await res.json());
+});
+
+refresh();
+setInterval(refresh, 1500);
+</script>
+</body>
+</html>

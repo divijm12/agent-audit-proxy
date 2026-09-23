@@ -1,0 +1,8 @@
+# Phase 3 demo config. Upstream is the Phase 2 fake API, so no real money moves.
+upstream: http://127.0.0.1:8788
+default_budget_usd: 1.00
+agents:
+  research-bot:
+    budget_usd: 0.60
+  runaway-bot:
+    budget_usd: 0.10

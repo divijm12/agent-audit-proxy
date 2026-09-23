@@ -58,9 +58,18 @@ file) and write to the same audit log.
    history yet); a call that costs much more than the previous one can overshoot
    by the difference; server-tool fees (web search) and fast-mode pricing aren't
    counted; budgets are lifetime totals (no daily reset yet).
-3. **Dashboard + kill switch UI.** One HTML page: STOP/RESUME (toggles `HALT`,
-   closes open streams), per-agent spend bars, last 50 audit rows.
-4. **Export + evals.** `/export?hours=72` markdown report; runaway, policy
+3. **Done (2026-09-23). Dashboard + kill switch UI.** `GET /dashboard` on the
+   spend proxy: plain HTML + `fetch()`, refreshed every 1.5s. STOP/RESUME toggles
+   the shared `HALT` file (freezes tool calls and model calls, cuts open streams);
+   every STOP/RESUME, from the button or `shugo halt`, is an audit entry.
+   Per-agent spend bars turn red when an agent can't afford its next call; last
+   50 audit rows. Buttons need an `x-shugo-dashboard` header so other websites
+   can't press them through your browser. Local only until Phase 5 adds a login.
+   Checked in a real browser, not just tests.
+4. **Export + evals.** Also: apply tool rules to `tool_use` blocks in Claude's
+   replies (agents that define tools in the API request, not via MCP, currently
+   bypass shugo; the red-team eval needs this). `/export?hours=72` markdown report; runaway, policy
    (incl. `args_match`), and tamper evals; proxy-overhead p50/p95.
-5. **Deploy + README.** Dockerfile, Fly.io; README with real numbers; **one real
+5. **Deploy + README.** Login in front of the dashboard before it's reachable
+   from the internet. Dockerfile, Fly.io; README with real numbers; **one real
    Claude Haiku 4.5 run capped at $0.30 total** (agent budget set below that, e.g. $0.10) to prove the budget stop; then make the repo public.

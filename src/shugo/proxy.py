@@ -11,7 +11,7 @@ from mcp.server.lowlevel import NotificationOptions, Server
 from mcp.server.stdio import stdio_server
 from mcp.shared.exceptions import McpError
 
-from shugo import paths, router
+from shugo import killswitch, paths, router
 from shugo.approval.channel import ApprovalChannel, PendingApproval
 from shugo.approval.file_channel import FileApprovalChannel
 from shugo.audit.log import AuditLog
@@ -46,7 +46,7 @@ def _build_server(
 
     @server.call_tool()
     async def _call(qualified: str, arguments: dict[str, Any]) -> mcp_types.CallToolResult:
-        if paths.halt_sentinel().exists():
+        if killswitch.is_halted():
             raise _mcp_error("SHUGO halted — all calls denied until unhalt")
 
         try:
