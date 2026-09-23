@@ -128,13 +128,15 @@ def test_runaway_agent_is_stopped_at_budget(home):
     with _client(fake, agents={"bot": {"budget_usd": 0.10}}) as c:
         codes = [_post(c).status_code for _ in range(10)]
         blocked = _post(c)
-    # $0.03/call: calls 1-4 run (0.03 .. 0.12), then the agent is cut off.
-    assert codes == [200] * 4 + [402] * 6
-    assert len(fake.requests) == 4                     # blocked calls never reach the API
+        spent = c.get("/spend/status").json()["agents"][0]["total_spent"]
+    # $0.03/call: calls 1-3 run (0.09 spent); a 4th would reach 0.12, so it's refused.
+    assert codes == [200] * 3 + [402] * 7
+    assert len(fake.requests) == 3                     # blocked calls never reach the API
+    assert spent == pytest.approx(0.09)                # stopped under the limit, not over
     err = blocked.json()["error"]
     assert err["type"] == "billing_error" and "budget exceeded for agent 'bot'" in err["message"]
     denies = [e for e in _audit(home) if e["decision"] == "deny"]
-    assert len(denies) == 7 and all(e["matched_rule_id"] == "budget" for e in denies)
+    assert len(denies) == 8 and all(e["matched_rule_id"] == "budget" for e in denies)
 
 
 def test_other_agents_keep_working_when_one_is_blocked(home):

@@ -19,10 +19,10 @@ CREATE TABLE IF NOT EXISTS agents (
 class BudgetExceeded(Exception):
     def __init__(self, agent_id: str, spent: float, limit: float, estimate: float) -> None:
         self.agent_id, self.spent, self.limit, self.estimate = agent_id, spent, limit, estimate
-        super().__init__(
-            f"budget exceeded for agent '{agent_id}': spent ${spent:.4f} of ${limit:.2f} "
-            f"(this request needs ~${estimate:.4f} more)"
-        )
+        msg = f"budget exceeded for agent '{agent_id}': spent ${spent:.4f} of ${limit:.2f}"
+        if spent < limit:
+            msg += f", and the next call is estimated at ~${estimate:.4f}"
+        super().__init__(msg)
 
 
 @dataclass
@@ -35,7 +35,10 @@ class BudgetStore:
     """`reserve` before forwarding a request; `settle` with the real cost afterwards.
 
     Reservations make parallel requests from one agent count against the budget
-    before any of them finish. Single process: the spend proxy owns the ledger.
+    before any of them finish. The estimate for a call is at least what the
+    agent's previous call cost: a runaway loop repeats itself, so this stops it
+    *before* it crosses the limit instead of one call after. Single process:
+    the spend proxy owns the ledger.
     """
 
     def __init__(
@@ -44,6 +47,7 @@ class BudgetStore:
         self._default_limit = default_limit
         self._lock = threading.Lock()
         self._reserved: dict[str, float] = {}
+        self._last_cost: dict[str, float] = {}
         if str(db_path) != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(str(db_path), check_same_thread=False, isolation_level=None)
@@ -67,6 +71,7 @@ class BudgetStore:
         with self._lock:
             spent, limit = self._row(agent_id)
             reserved = self._reserved.get(agent_id, 0.0)
+            estimate = max(estimate, self._last_cost.get(agent_id, 0.0))
             if spent >= limit or spent + reserved + estimate > limit:
                 raise BudgetExceeded(agent_id, spent + reserved, limit, estimate)
             self._reserved[agent_id] = reserved + estimate
@@ -76,6 +81,8 @@ class BudgetStore:
         """Release the reservation and record the real cost. Returns the new total."""
         with self._lock:
             self._reserved[res.agent_id] = max(0.0, self._reserved.get(res.agent_id, 0.0) - res.amount)
+            if actual_cost > 0:  # failed calls cost nothing and say nothing about the next one
+                self._last_cost[res.agent_id] = actual_cost
             self._row(res.agent_id)
             self._db.execute(
                 "UPDATE agents SET total_spent = total_spent + ? WHERE agent_id = ?",
@@ -91,6 +98,7 @@ class BudgetStore:
     def reset(self, agent_id: str) -> None:
         with self._lock:
             self._db.execute("UPDATE agents SET total_spent = 0 WHERE agent_id = ?", (agent_id,))
+            self._last_cost.pop(agent_id, None)
 
     def status(self) -> list[dict[str, float | str]]:
         with self._lock:

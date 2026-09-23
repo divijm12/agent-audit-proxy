@@ -102,3 +102,81 @@ Linux, macOS and Windows machines every time we push. It came with shugo in
 3. **Reading the email.** `gh run list` first showed shugo's July runs, because
    our repo has two remotes and `gh` picked `upstream`. Use
    `gh run list -R divijm12/agent-audit-proxy` to see ours.
+
+---
+
+## Phase 2 — The spending limit (2026-09-22)
+
+### Where the money goes
+
+Agents don't pay per question, they pay per **token** (roughly ¾ of a word),
+and input (what you send) is cheaper than output (what the model writes).
+Claude Haiku 4.5 costs $1 per million input tokens and $5 per million output.
+Every Anthropic response ends with a **usage** block saying exactly how many of
+each it used, so cost = tokens × price. That's all `pricing.py` does. (Cached
+prompt tokens have their own cheaper rates, which it also handles.)
+
+### A second proxy, for the model instead of the tools
+
+shugo sits between the agent and its **tools**. The new spend proxy sits between
+the agent and the **model**. It's a small web server (FastAPI) that speaks the
+same language as `api.anthropic.com`, so an agent only has to change one
+setting: `ANTHROPIC_BASE_URL=http://127.0.0.1:8787`. Its own API key passes
+straight through; the proxy never stores it or logs it.
+
+For every call, in order:
+
+1. **Kill switch.** Is the `HALT` file there? Same file shugo checks, so one
+   STOP freezes tools *and* model calls.
+2. **Price.** Do we know what this model costs? If not, refuse by default,
+   because you can't budget what you can't price.
+3. **Budget.** Has this agent (named by an `x-agent-id` header) got room left?
+4. **Forward**, then read the real usage from the reply and **record the cost**
+   in a small SQLite database (the "ledger") and in the shared audit log.
+
+### Streaming: pass the bytes, read over their shoulder
+
+Most agents *stream* replies word by word (Server-Sent Events). The proxy must
+not slow that down or change it, so it forwards each chunk the instant it
+arrives and, on the side, watches for two events: `message_start` (input
+tokens) and `message_delta` (output tokens, at the end). A test checks the
+bytes the agent receives are identical to what Anthropic sent.
+
+### The interesting problem: you can't know the price in advance
+
+The proxy has to decide *before* sending a call, but the cost is only known
+*after*: nobody knows how long the answer will be. Our first version guessed
+from the size of the request. The demo agent sends tiny requests that produce
+expensive answers, so the guess was ~$0, and the agent made one call too many:
+it stopped at **$0.12** on a **$0.10** budget.
+
+The fix uses what a runaway agent is: something repeating itself. The guess
+for the next call is now *at least what this agent's last call cost*. At $0.09
+spent, with the last call costing $0.03, the next one would reach $0.12, so it's
+refused. The agent stops at **$0.09**, under the limit. Honest limits: an
+agent's very first call has no history, and a call much pricier than the one
+before can still overshoot by the difference. Those are written down in
+`docs/plan.md` rather than hidden.
+
+### Two agents calling at once
+
+If an agent fires 5 calls in parallel, all 5 could pass the check before any
+finishes. So each call **reserves** its estimated cost up front, and the
+reservation is swapped for the real cost when the answer arrives. It's the same
+idea as a hotel putting a hold on your card.
+
+### A bug we'd have shipped: two writers, one log
+
+The audit log's hash chain remembered the last entry's fingerprint *in memory*.
+With one program writing, fine. With two (shugo **and** the spend proxy), each
+would chain onto its own stale fingerprint, and `verify` would scream
+"tampered!" at a log nobody tampered with. Fix: before writing, take a **file
+lock** (so only one process writes at a time) and re-read the real last line
+from disk. A test runs 3 processes × 40 writes at once and checks the chain.
+
+### Why a 402, and why that matters
+
+When an agent is over budget the proxy answers exactly like Anthropic would for
+a billing problem: HTTP **402** `billing_error`. The Anthropic SDK turns that
+into a normal exception and, importantly, **doesn't retry it** (it retries 429s
+and 5xx errors). A "stop" that the client automatically retries isn't a stop.

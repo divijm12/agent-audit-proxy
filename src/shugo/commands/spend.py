@@ -44,12 +44,12 @@ def run_status(config: Path, console: Console) -> None:
     if not rows:
         console.print("[dim]no agents have made calls yet[/dim]")
         return
-    table = Table("agent", "spent", "limit", "used", "state")
+    table = Table("agent", "spent", "limit", "used", "left")
     for r in rows:
         spent, limit = float(r["total_spent"]), float(r["budget_limit"])
         used = spent / limit if limit else 1.0
-        state = "[red]blocked[/red]" if spent >= limit else "[green]ok[/green]"
-        table.add_row(str(r["agent_id"]), f"${spent:.4f}", f"${limit:.2f}", f"{used:.0%}", state)
+        left = "[red]none - blocked[/red]" if spent >= limit else f"${limit - spent:.4f}"
+        table.add_row(str(r["agent_id"]), f"${spent:.4f}", f"${limit:.2f}", f"{used:.0%}", left)
     console.print(table)
 
 
