@@ -8,8 +8,9 @@ import threading
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
+from shugo.audit.filelock import exclusive
 from shugo.errors import AuditError
 
 SEED_HASH = "0" * 64
@@ -75,19 +76,14 @@ def _read_chain_head(path: Path) -> str:
     if not path.exists() or path.stat().st_size == 0:
         return SEED_HASH
     try:
-        with path.open("rb") as f:
-            last = b""
-            for line in f:
-                stripped = line.strip()
-                if stripped:
-                    last = stripped
-            if not last:
-                return SEED_HASH
-            entry = json.loads(last)
-            h = entry.get(_HASH_FIELD)
-            if not isinstance(h, str) or len(h) != 64:
-                raise AuditError(f"corrupt last-entry hash in {path}")
-            return h
+        last = _read_last_line(path)
+        if not last:
+            return SEED_HASH
+        entry = json.loads(last)
+        h = entry.get(_HASH_FIELD)
+        if not isinstance(h, str) or len(h) != 64:
+            raise AuditError(f"corrupt last-entry hash in {path}")
+        return h
     except (OSError, json.JSONDecodeError) as e:
         raise AuditError(f"cannot read audit log {path}: {e}") from e
 
@@ -95,8 +91,10 @@ def _read_chain_head(path: Path) -> str:
 class AuditLog:
     """Append-only JSONL log with a rolling SHA-256 hash chain.
 
-    Thread-safe (single-process). One line per entry. Redaction is applied
-    before hashing so the stored record and its hash agree.
+    Safe for several threads and several processes appending to the same
+    file (e.g. the tool guard and the spend proxy): each append takes a file
+    lock and re-reads the chain head from disk. One line per entry. Redaction
+    is applied before hashing so the stored record and its hash agree.
     """
 
     def __init__(self, path: str | Path, *, redact_paths: Iterable[str] = ()) -> None:
@@ -104,6 +102,7 @@ class AuditLog:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._redact_paths = tuple(redact_paths)
         self._lock = threading.Lock()
+        self._lock_path = self._path.with_name(self._path.name + ".lock")
         self._prev_hash = _read_chain_head(self._path)
 
     @property
@@ -127,9 +126,12 @@ class AuditLog:
         controls: Iterable[str] = (),
         approver: str | None = None,
         ts: str | None = None,
+        extra: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
+        """Build an entry. `extra` adds fields (e.g. agent_id, cost_usd); it
+        cannot override the core fields below."""
         args_redacted = _apply_redaction(args, self._redact_paths)
-        return {
+        core = {
             "ts": ts or datetime.now(timezone.utc).isoformat(timespec="microseconds"),
             "request_id": request_id,
             "server": server,
@@ -141,9 +143,12 @@ class AuditLog:
             "controls": list(controls),
             "approver": approver,
         }
+        return {**(extra or {}), **core}
 
     def append(self, entry: dict[str, Any]) -> dict[str, Any]:
-        with self._lock:
+        with self._lock, exclusive(self._lock_path):
+            # Another process may have appended since we last wrote.
+            self._prev_hash = _read_chain_head(self._path)
             this_hash = _hash_entry(entry, self._prev_hash)
             record = dict(entry)
             record[_PREV_FIELD] = self._prev_hash
@@ -165,3 +170,21 @@ class AuditLog:
         with self._path.open("r", encoding="utf-8") as f:
             lines = [line.strip() for line in f if line.strip()]
         return [json.loads(line) for line in lines[-n:]]
+
+
+def _read_last_line(path: Path, chunk: int = 8192) -> bytes:
+    """Last non-empty line, read backwards from the end (O(line), not O(file))."""
+    with path.open("rb") as f:
+        f.seek(0, os.SEEK_END)
+        pos = f.tell()
+        buf = b""
+        while pos > 0:
+            step = min(chunk, pos)
+            pos -= step
+            f.seek(pos)
+            buf = f.read(step) + buf
+            stripped = buf.rstrip()
+            nl = stripped.rfind(b"\n")
+            if nl != -1:
+                return stripped[nl + 1:].strip()
+        return buf.strip()

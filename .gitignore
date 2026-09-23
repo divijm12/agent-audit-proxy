@@ -13,3 +13,4 @@ htmlcov/
 *.log
 .shugo/
 examples/phase1/.shugo-home/
+*.log.lock
