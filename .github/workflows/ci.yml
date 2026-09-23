@@ -14,6 +14,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: ["3.11", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
+    env:
+      UV_PYTHON: ${{ matrix.python }}
     steps:
       - uses: actions/checkout@v4
 
@@ -22,18 +24,17 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Set up Python
-        run: uv python install ${{ matrix.python }}
-
-      - name: Install project (editable, with dev extras)
-        run: uv pip install --system -e ".[dev]"
+      - name: Install project + dev extras into .venv (from uv.lock)
+        run: uv sync --locked --extra dev
 
       - name: Run tests
-        run: uv run --with pytest pytest -m "not slow" -q
+        run: uv run --extra dev pytest -m "not slow" -q
 
   e2e:
     runs-on: ubuntu-latest
     needs: test
+    env:
+      UV_PYTHON: "3.12"
     steps:
       - uses: actions/checkout@v4
 
@@ -42,11 +43,8 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Install project
-        run: uv pip install --system -e ".[dev]"
+      - name: Install project + dev extras into .venv (from uv.lock)
+        run: uv sync --locked --extra dev
 
       - name: Set up Node (for npx)
         uses: actions/setup-node@v4
@@ -54,4 +52,4 @@ jobs:
           node-version: "20"
 
       - name: Run slow e2e tests
-        run: uv run --with pytest pytest -m slow -q
+        run: uv run --extra dev pytest -m slow -q
