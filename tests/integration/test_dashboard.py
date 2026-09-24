@@ -113,4 +113,4 @@ def test_cli_report(home, tmp_path):
 
     out = tmp_path / "r.md"
     result = CliRunner().invoke(app, ["audit", "report", "--hours", "24", "-o", str(out)])
-    assert result.exit_code == 0 and out.read_text().startswith("# Agent incident report — last 24 hours")
+    assert result.exit_code == 0 and out.read_text(encoding="utf-8").startswith("# Agent incident report — last 24 hours")
