@@ -89,3 +89,21 @@ def test_reset_clears_spend():
     s.settle(s.reserve("bot", 0.0), 0.50)
     s.reset("bot")
     s.reserve("bot", 0.05)
+
+
+def test_growing_costs_overshoot_by_at_most_one_step():
+    """Each call costs `step` more than the last; the estimate uses the last call,
+    so the overshoot is bounded by one step, whatever the numbers."""
+    for step in (0.001, 0.004, 0.013):
+        for first in (0.005, 0.02):
+            s = _store(bot=0.50)
+            cost = first
+            while True:
+                try:
+                    res = s.reserve("bot", 0.0)
+                except BudgetExceeded:
+                    break
+                s.settle(res, cost)
+                cost += step
+            spent = s.status()[0]["total_spent"]
+            assert spent - 0.50 <= step + 1e-9, (step, first, spent)

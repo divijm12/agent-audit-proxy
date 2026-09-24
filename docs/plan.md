@@ -66,10 +66,20 @@ file) and write to the same audit log.
    50 audit rows. Buttons need an `x-shugo-dashboard` header so other websites
    can't press them through your browser. Local only until Phase 5 adds a login.
    Checked in a real browser, not just tests.
-4. **Export + evals.** Also: apply tool rules to `tool_use` blocks in Claude's
-   replies (agents that define tools in the API request, not via MCP, currently
-   bypass shugo; the red-team eval needs this). `/export?hours=72` markdown report; runaway, policy
-   (incl. `args_match`), and tamper evals; proxy-overhead p50/p95.
+4. **Done (2026-09-24). Export + evals.**
+   - Incident report: `GET /export?hours=72`, dashboard button, `shugo audit report`.
+     Markdown with integrity check (PASS/FAIL + chain head), totals, per-agent,
+     kill-switch timeline, blocked actions, full trail.
+   - Way-B gap closed: `tool_policy` in spend.yaml applies guardrails.yaml rules to
+     `tool_use` blocks in Claude's replies (rewrite blocked calls to an explanation,
+     or refuse the reply; escalate waits for a human). Policy gained `args_regex`.
+   - `shugo audit verify --anchor` catches tail truncation and full rewrites.
+   - Evals (`evals/run_evals.py` → `evals/RESULTS.md`): runaway stopped at $0.48 of
+     $0.50 (vs $50 unsupervised); 40/40 attack checks blocked, 0/20 harmless blocked;
+     tamper 5/7 by chain alone, 7/7 with anchor; latency added p50 1.3 ms / p95 1.5 ms.
+   - Found on the way: stream relay forwarded compressed bytes without their header
+     (fixed: relay decoded bytes).
+   - README still to be rewritten with these numbers (Phase 5).
 5. **Deploy + README.** Login in front of the dashboard before it's reachable
    from the internet. Dockerfile, Fly.io; README with real numbers; **one real
    Claude Haiku 4.5 run capped at $0.30 total** (agent budget set below that, e.g. $0.10) to prove the budget stop; then make the repo public.

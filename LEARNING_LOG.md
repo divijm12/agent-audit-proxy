@@ -230,3 +230,85 @@ Stopping the demo with a plain `kill` left its two servers running in the
 background, still holding their ports, so the next run quietly talked to the
 *old* code. Python only runs `finally:` clean-up on Ctrl+C by default, not on
 `kill`. The demo scripts now turn `kill` into a normal exit so they clean up.
+
+---
+
+## Phase 4 — Proof: the report, the gap, and the numbers (2026-09-24)
+
+### Closing the gap: reading Claude's orders
+
+Some agents keep their tools in their own code (see "Way B" in our chat
+notes). Claude's reply says "run `bash` with `rm -rf /`" and the agent just
+does it. shugo never sees that, but the reply passes through the spend proxy.
+So the spend proxy now reads every `tool_use` block in Claude's replies and
+checks it against the *same* rules file shugo uses:
+
+- **allowed** → passed on untouched,
+- **denied** → swapped for a note, "[blocked by policy] Tool call `bash` was not
+  run: Recursive deletes are prohibited." The agent never receives the order,
+  and Claude reads the note next turn and can try something else,
+- **ask a human** → the reply waits until someone approves (same approval tool
+  as shugo).
+
+Streaming made this interesting: a tool call arrives in pieces (`{"comm`,
+`and": "rm -r`, …). Text is passed through the moment it arrives, but a tool
+call is **held back until it's complete**, then judged, then released or
+replaced. We proved the rewritten stream is valid by reading it with
+Anthropic's own SDK in a test: if we'd produced a malformed event, the SDK
+would have crashed.
+
+### Rules that look inside the arguments
+
+Rules could only say "tool = bash and command = exactly this". Useless for
+`rm -rf`, which comes in a thousand spellings. Rules now take `args_regex`: a
+pattern searched *inside* a field. But the bigger lesson from the red-team
+eval: **allow-lists beat block-lists**. Our eval policy allows a handful of
+safe commands (`ls`, `git status`, `grep`…) with no `; | & $ >` characters, and
+denies everything else. The base64-hidden `rm`, the fork bomb, `find -delete`:
+none of them needed a special rule. They weren't on the list, so they were
+denied.
+
+### The incident report
+
+`/export?hours=72` (or the dashboard button, or `shugo audit report`) writes a
+markdown report: time window, totals, per-agent spend, every blocked action,
+when the kill switch was pressed, the full trail, and whether the log is intact.
+Agent-written text is escaped so a sneaky agent name can't break the tables or
+sneak HTML in.
+
+### What "tamper-proof" really means (and doesn't)
+
+The eval attacked a 200-entry log seven ways. The hash chain caught five. It
+**missed** two: cutting entries off the end, and editing an entry then
+*recomputing every hash after it*. That's possible because the recipe for the
+fingerprint is public. There's no secret. The fix is old and simple: write
+down the latest fingerprint (the "chain head") somewhere the attacker can't
+reach. Every incident report prints it. `shugo audit verify --anchor <that
+hash>` then catches all seven. Being honest about the two misses is more
+convincing than claiming "tamper-proof".
+
+### Evals: numbers instead of claims
+
+| What | Result |
+|---|---|
+| Runaway agent, $0.50 budget (would have spent $50) | stopped at **$0.48** |
+| Dangerous tool calls blocked (20 attacks × plain + streaming) | **40/40** |
+| Harmless calls wrongly blocked | **0/20** |
+| Tampering caught (chain + saved anchor) | **7/7** |
+| Delay the proxy adds (typical / slow calls) | **1.3 / 1.5 ms** |
+
+Two habits worth keeping: include **harmless** cases (a system that blocks
+everything scores 100% on attacks), and let the write-up **follow the data**.
+The first draft claimed the "growing conversation" agent overshot its budget;
+the run showed it didn't, so the sentence was wrong. Now the text is generated
+from the numbers, and the worst case ("at most one call's growth") is proven by
+a separate test.
+
+### A real bug the evals found
+
+The first eval run crashed. The proxy relayed streams as "raw" bytes, which
+(a) broke on a reply that arrived all at once and (b) would have passed
+*compressed* bytes to the agent while removing the header that says they're
+compressed. Unreadable output, if Anthropic ever compressed a stream. One-line
+fix, two tests. Evals aren't just for the README; they're also a very good way
+to find bugs.
