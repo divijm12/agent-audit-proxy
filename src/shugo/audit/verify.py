@@ -15,13 +15,20 @@ class VerifyResult:
     error_line: int | None = None
 
 
-def verify_log(path: str | Path) -> VerifyResult:
+def verify_log(path: str | Path, anchor: str | None = None) -> VerifyResult:
+    """Recompute the hash chain. `anchor` is a chain head saved earlier (somewhere
+    the log's writer can't change); it must still be in the chain. The chain alone
+    can't catch entries cut off the end, or a rewrite that recomputes every later
+    hash; a saved anchor catches both."""
     p = Path(path)
     if not p.exists() or p.stat().st_size == 0:
+        if anchor:
+            return VerifyResult(ok=False, entries=0, error="log is empty but an anchor was given")
         return VerifyResult(ok=True, entries=0)
 
     prev = SEED_HASH
     count = 0
+    anchor_seen = anchor is None
     with p.open("r", encoding="utf-8") as f:
         for lineno, raw in enumerate(f, start=1):
             line = raw.strip()
@@ -51,4 +58,11 @@ def verify_log(path: str | Path) -> VerifyResult:
                 )
             prev = stored
             count += 1
+            anchor_seen = anchor_seen or stored == anchor
+    if not anchor_seen:
+        return VerifyResult(
+            ok=False,
+            entries=count,
+            error="anchor not found in the chain: entries were cut off the end or the log was rewritten",
+        )
     return VerifyResult(ok=True, entries=count)

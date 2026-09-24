@@ -57,3 +57,28 @@ def test_extra_fields_are_recorded_and_hashed(tmp_path):
     # editing an extra field must break the chain like any other field
     path.write_text(path.read_text().replace("0.0123", "0.0001"))
     assert not verify_log(path).ok
+
+
+def _log_with(path, n):
+    log = AuditLog(path)
+    for i in range(n):
+        log.append(_entry(log, i, "a"))
+    return log.head
+
+
+def test_anchor_catches_entries_cut_off_the_end(tmp_path):
+    path = tmp_path / "audit.log"
+    head = _log_with(path, 10)
+    lines = path.read_text().splitlines()
+    path.write_text("\n".join(lines[:7]) + "\n")
+    assert verify_log(path).ok                      # the chain alone can't tell
+    result = verify_log(path, anchor=head)
+    assert not result.ok and "anchor not found" in result.error
+
+
+def test_anchor_still_passes_after_more_entries(tmp_path):
+    path = tmp_path / "audit.log"
+    head = _log_with(path, 5)
+    log = AuditLog(path)
+    log.append(_entry(log, 99, "b"))
+    assert verify_log(path, anchor=head).ok

@@ -120,11 +120,15 @@ def audit_report(
 
 
 @audit_app.command("verify")
-def audit_verify() -> None:
+def audit_verify(
+    anchor: Optional[str] = typer.Option(
+        None, "--anchor", help="A chain head saved earlier; fails if it's no longer in the chain"
+    ),
+) -> None:
     """Verify the audit log hash chain."""
     from shugo.commands import audit as _cmd
 
-    _cmd.run_verify(console=console)
+    _cmd.run_verify(console=console, anchor=anchor)
 
 
 _SPEND_CONFIG = typer.Option(Path("spend.yaml"), "--config", "-c", help="Path to spend.yaml")

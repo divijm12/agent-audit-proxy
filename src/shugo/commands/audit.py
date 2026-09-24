@@ -53,11 +53,12 @@ def _print_entry(console: Console, line: str) -> None:
     )
 
 
-def run_verify(console: Console) -> int:
+def run_verify(console: Console, anchor: str | None = None) -> int:
     p = paths.audit_log()
-    result = verify_log(p)
+    result = verify_log(p, anchor=anchor)
     if result.ok:
         console.print(f"[green]OK[/green] {p}: {result.entries} entries verified")
         return 0
-    console.print(f"[red]FAIL[/red] {p}: {result.error} (line {result.error_line})")
+    where = f" (line {result.error_line})" if result.error_line else ""
+    console.print(f"[red]FAIL[/red] {p}: {result.error}{where}")
     raise typer.Exit(code=1)
