@@ -10,19 +10,23 @@ import json
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Callable
 
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from shugo import killswitch, paths
+from shugo.approval.file_channel import FileApprovalChannel
 from shugo.audit.log import AuditLog
+from shugo.policy.engine import Decision, PolicyEngine
+from shugo.policy.loader import load_config
 from shugo.spend.budget import BudgetExceeded, BudgetStore
 from shugo.spend.config import SpendConfig
 from shugo.spend.dashboard import build_router
 from shugo.spend.pricing import Price, PriceTable, cost_of_usage
 from shugo.spend.sse import UsageTracker
+from shugo.spend.tools import ToolBlocked, ToolGate
 
 AGENT_HEADER = "x-agent-id"
 DEFAULT_AGENT = "default"
@@ -55,6 +59,7 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
     )
     paths.ensure_layout()
     audit = AuditLog(paths.audit_log())
+    make_gate = _gate_factory(cfg)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -121,6 +126,8 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
                    spent_usd=round(e.spent, 6), budget_usd=e.limit)
             return _error(402, "billing_error", str(e))
 
+        gate = make_gate(agent, req_id) if make_gate else None
+
         # 3. Forward
         headers = {k: v for k, v in request.headers.items() if k.lower() not in _DROP_REQUEST_HEADERS}
         headers["accept-encoding"] = "identity"
@@ -149,6 +156,7 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
                 await upstream.aclose()
             usage: dict[str, Any] = {}
             model_used = None
+            data: dict[str, Any] | None = None
             if upstream.status_code == 200:
                 try:
                     data = json.loads(content)
@@ -156,9 +164,16 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
                 except ValueError:
                     pass
             finish(usage, upstream.status_code, model_used=model_used)
+            if gate and isinstance(data, dict):
+                # 4. Tool rules on the tool calls Claude is asking for
+                try:
+                    content = json.dumps(await gate.filter_message(data)).encode()
+                except ToolBlocked as e:
+                    return _error(403, "permission_error", str(e))
             return Response(content=content, status_code=upstream.status_code, headers=out_headers)
 
         tracker = UsageTracker()
+        tool_filter = gate.stream_filter() if gate else None
 
         async def relay() -> AsyncIterator[bytes]:
             note = None
@@ -169,7 +184,20 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
                         yield _sse_error("permission_error", "halted by kill switch: stream closed")
                         break
                     tracker.feed(chunk)
-                    yield chunk
+                    if tool_filter is None:
+                        yield chunk
+                        continue
+                    try:
+                        out = await tool_filter.feed(chunk)
+                    except ToolBlocked as e:
+                        note = "stream cut by tool policy"
+                        yield _sse_error("permission_error", str(e))
+                        break
+                    if out:
+                        yield out
+                else:
+                    if tool_filter is not None and (rest := tool_filter.flush()):
+                        yield rest
             finally:
                 # Record first: if the agent disconnected, the await below can be
                 # cancelled, and the spend must not be lost with it.
@@ -195,3 +223,26 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
         return Response(content=upstream.content, status_code=upstream.status_code, headers=out)
 
     return app
+
+
+def _gate_factory(cfg: SpendConfig) -> Callable[[str, str], ToolGate] | None:
+    """Build one ToolGate per request (it records which agent and model call it belongs to)."""
+    if cfg.tool_policy is None:
+        return None
+    tp = cfg.tool_policy
+    policy = load_config(tp.policy)
+    engine = PolicyEngine(policy)
+    tool_audit = AuditLog(paths.audit_log(), redact_paths=policy.redact)  # tool args may hold secrets
+    approval = FileApprovalChannel()
+
+    def make(agent: str, model_request_id: str) -> ToolGate:
+        def record(req_id: str, name: str, args: dict[str, Any], d: Decision) -> None:
+            tool_audit.append(tool_audit.build(
+                request_id=req_id, server=tp.server, tool=name, args=args, decision=d.kind,
+                matched_rule_id=d.rule_id, reason=d.reason, controls=d.controls, approver=d.approver,
+                extra={"kind": "tool_call", "agent_id": agent, "model_request_id": model_request_id},
+            ))
+
+        return ToolGate(engine, server=tp.server, on_deny=tp.on_deny, approval=approval, record=record)
+
+    return make
