@@ -54,7 +54,18 @@ redact:                     # dotted paths of secret-bearing fields
 ## Match semantics
 
 - **`server`** and **`tool`** — string or list of strings. Each item is a `fnmatch` glob (`*`, `?`, `[abc]`). Both must match if given.
-- **`args`** — nested equality. Every key you specify must exist in the call arguments with an equal value; extra keys in the call are fine. No regex in v0.1.
+- **`args`** — nested equality. Every key you specify must exist in the call arguments with an equal value; extra keys in the call are fine.
+- **`args_regex`** — `field: regex` pairs, each searched *inside* that field's string value (Python `re.search`). The field is a dotted path (`options.path`) or `"*"` for any string anywhere in the arguments. All pairs must match, together with `args`. Invalid patterns are rejected when the policy loads. Prefer allow-lists over clever deny patterns: a regex blocklist can always be dodged by rephrasing a command, a default-deny can't.
+
+  ```yaml
+  - id: no-recursive-delete
+    match:
+      tool: bash
+      args_regex:
+        command: 'rm\s+-\w*[rR]'
+    decision: deny
+    reason: Recursive deletes are prohibited.
+  ```
 - Rule order is precedence. First match wins.
 - If no rule matches, `defaults.decision` applies.
 

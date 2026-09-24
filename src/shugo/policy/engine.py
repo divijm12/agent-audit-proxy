@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import fnmatch
+import re
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from functools import lru_cache
+from typing import Any, Iterator, Literal
 
 from shugo.policy.models import Approval, Config, Rule
 
@@ -77,12 +79,56 @@ def _match_args(spec: dict[str, Any] | None, actual: dict[str, Any]) -> bool:
     return True
 
 
+def _strings(value: Any) -> Iterator[str]:
+    """Every string anywhere inside nested dicts / lists."""
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for v in value.values():
+            yield from _strings(v)
+    elif isinstance(value, (list, tuple)):
+        for v in value:
+            yield from _strings(v)
+
+
+def _field(args: Any, dotted: str) -> Any:
+    cur = args
+    for key in dotted.split("."):
+        if not isinstance(cur, dict) or key not in cur:
+            return None
+        cur = cur[key]
+    return cur
+
+
+@lru_cache(maxsize=512)
+def _compiled(pattern: str) -> re.Pattern[str]:
+    return re.compile(pattern)
+
+
+def _match_args_regex(spec: dict[str, str] | None, actual: dict[str, Any]) -> bool:
+    """Every field's regex must be found (re.search) in that field's string value."""
+    if spec is None:
+        return True
+    for field, pattern in spec.items():
+        rx = _compiled(pattern)
+        if field == "*":
+            if not any(rx.search(s) for s in _strings(actual)):
+                return False
+        else:
+            value = _field(actual, field)
+            if not isinstance(value, str) or not rx.search(value):
+                return False
+    return True
+
+
 def _rule_matches(rule: Rule, ctx: EvalContext) -> bool:
     if not _match_any(ctx.server, _globs(rule.match.server)):
         return False
     if not _match_any(ctx.tool, _globs(rule.match.tool)):
         return False
     if not _match_args(rule.match.args, ctx.args):
+        return False
+    if not _match_args_regex(rule.match.args_regex, ctx.args):
         return False
     return True
 

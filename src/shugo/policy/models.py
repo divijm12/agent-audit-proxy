@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -11,6 +12,19 @@ class Match(BaseModel):
     server: str | list[str] | None = None
     tool: str | list[str] | None = None
     args: dict[str, Any] | None = None
+    # field -> regex, searched *inside* string values. Field is a dotted path
+    # ("options.path"), or "*" for any string anywhere in the arguments.
+    args_regex: dict[str, str] | None = None
+
+    @field_validator("args_regex")
+    @classmethod
+    def _regexes_compile(cls, v: dict[str, str] | None) -> dict[str, str] | None:
+        for field, pattern in (v or {}).items():
+            try:
+                re.compile(pattern)
+            except re.error as e:
+                raise ValueError(f"invalid regex for {field!r}: {pattern!r} ({e})") from e
+        return v
 
 
 class Approval(BaseModel):
