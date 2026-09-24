@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from shugo import killswitch, paths
 from shugo.audit.log import AuditLog
-from shugo.spend.budget import BudgetExceeded, BudgetStore, Reservation
+from shugo.spend.budget import BudgetExceeded, BudgetStore
 from shugo.spend.config import SpendConfig
 from shugo.spend.dashboard import build_router
 from shugo.spend.pricing import Price, PriceTable, cost_of_usage

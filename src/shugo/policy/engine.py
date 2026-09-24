@@ -8,7 +8,6 @@ from typing import Any, Iterator, Literal
 
 from shugo.policy.models import Approval, Config, Rule
 
-
 DecisionKind = Literal["allow", "deny", "escalate"]
 
 

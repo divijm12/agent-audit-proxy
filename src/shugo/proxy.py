@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import os
 import uuid
 from contextlib import AsyncExitStack
-from datetime import datetime, timezone
 from typing import Any, Mapping
 
 from mcp import types as mcp_types
@@ -12,11 +10,12 @@ from mcp.server.stdio import stdio_server
 from mcp.shared.exceptions import McpError
 
 from shugo import killswitch, paths, router
-from shugo.approval.channel import ApprovalChannel, PendingApproval
+from shugo.approval.channel import ApprovalChannel
 from shugo.approval.file_channel import FileApprovalChannel
+from shugo.approval.resolve import resolve_escalation
 from shugo.audit.log import AuditLog
 from shugo.errors import ShugoError
-from shugo.policy.engine import Decision, EvalContext, PolicyEngine
+from shugo.policy.engine import EvalContext, PolicyEngine
 from shugo.policy.models import Config
 from shugo.upstream import StdioUpstream, UpstreamProtocol
 
@@ -60,41 +59,9 @@ def _build_server(
         req_id = uuid.uuid4().hex
         decision = engine.evaluate(EvalContext(server=server_name, tool=tool_name, args=arguments))
 
-        if decision.kind == "escalate":
-            if approval is None:
-                decision = Decision(
-                    kind="deny",
-                    rule_id=decision.rule_id,
-                    reason="escalate rule matched but no approval channel is configured",
-                    controls=decision.controls,
-                )
-            else:
-                assert decision.approval is not None
-                pending = PendingApproval(
-                    id=req_id,
-                    ts=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
-                    server=server_name,
-                    tool=tool_name,
-                    args=dict(arguments),
-                    rule_id=decision.rule_id,
-                    reason=decision.reason,
-                    timeout_s=decision.approval.timeout_seconds,
-                    pid=os.getpid(),
-                    controls=decision.controls,
-                )
-                verdict = await approval.request(pending)
-                if verdict.kind == "timeout":
-                    on_timeout = decision.approval.on_timeout
-                    decision = Decision(
-                        kind=on_timeout,
-                        rule_id=decision.rule_id,
-                        reason=f"approval timed out after {decision.approval.timeout_seconds}s "
-                               f"(on_timeout={on_timeout})",
-                        controls=decision.controls,
-                        approver=None,
-                    )
-                else:
-                    decision = decision.with_verdict(verdict.kind, approver=verdict.approver)
+        decision = await resolve_escalation(
+            decision, approval, request_id=req_id, server=server_name, tool=tool_name, args=arguments
+        )
 
         entry = audit.build(
             request_id=req_id,
