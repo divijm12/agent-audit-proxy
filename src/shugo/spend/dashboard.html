@@ -29,6 +29,10 @@
             letter-spacing: .04em; cursor: pointer; color: var(--btn-text); background: var(--bad);
             min-width: 180px; }
   #toggle.resume { background: var(--ok); }
+  .actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .export { color: var(--text); border: 1px solid var(--line); background: var(--panel); border-radius: 10px;
+            padding: 12px 16px; text-decoration: none; font-weight: 600; font-size: 14px; }
+  .export:hover { border-color: var(--muted); }
   #toggle:disabled { opacity: .6; cursor: wait; }
   .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
   .agent { display: grid; grid-template-columns: minmax(110px, 180px) 1fr auto; gap: 12px; align-items: center; padding: 6px 0; }
@@ -56,7 +60,10 @@
       <h1>Agent Audit Proxy</h1>
       <div class="sub">Agents: <span id="status" class="status">loading…</span> <span id="since"></span></div>
     </div>
-    <button id="toggle" disabled>STOP</button>
+    <div class="actions">
+      <a class="export" href="/export?hours=72" download>Export incident report (72h)</a>
+      <button id="toggle" disabled>STOP</button>
+    </div>
   </header>
 
   <section class="panel">

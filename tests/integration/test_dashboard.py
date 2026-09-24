@@ -86,3 +86,31 @@ def test_cli_halt_is_audited_too(home, monkeypatch):
     CliRunner().invoke(app, ["unhalt"])
     lines = (home / "audit.log").read_text().splitlines()
     assert len(lines) == 2 and '"by": "cli"' in lines[0]
+
+
+def test_export_downloads_the_incident_report(home):
+    with _client(FakeAnthropic()) as c:
+        _post(c)
+        c.post("/api/stop", headers=BUTTON)
+        r = c.get("/export?hours=72")
+        page = c.get("/dashboard").text
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/markdown")
+    assert 'filename="incident-report-72h-' in r.headers["content-disposition"]
+    assert "**PASS.**" in r.text and "| Model calls attempted | 1 |" in r.text
+    assert "**halt** by dashboard" in r.text
+    assert 'href="/export?hours=72"' in page
+
+
+def test_export_rejects_silly_windows(home):
+    with _client(FakeAnthropic()) as c:
+        assert c.get("/export?hours=0").status_code == 422
+
+
+def test_cli_report(home, tmp_path):
+    from typer.testing import CliRunner
+
+    from shugo.cli import app
+
+    out = tmp_path / "r.md"
+    result = CliRunner().invoke(app, ["audit", "report", "--hours", "24", "-o", str(out)])
+    assert result.exit_code == 0 and out.read_text().startswith("# Agent incident report — last 24 hours")

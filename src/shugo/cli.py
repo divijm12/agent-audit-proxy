@@ -102,6 +102,23 @@ def audit_tail(
     _cmd.run_tail(n=n, follow=follow, console=console)
 
 
+@audit_app.command("report")
+def audit_report(
+    hours: int = typer.Option(72, "--hours", "-H", help="How far back to report"),
+    out: Optional[Path] = typer.Option(None, "--out", "-o", help="Write to a file instead of stdout"),
+) -> None:
+    """Incident report (markdown) for the last N hours, with a hash-chain check."""
+    from shugo import paths
+    from shugo.audit.report import export_incident_report
+
+    text = export_incident_report(paths.audit_log(), hours=hours)
+    if out is None:
+        typer.echo(text)
+    else:
+        out.write_text(text, encoding="utf-8")
+        console.print(f"wrote {out}")
+
+
 @audit_app.command("verify")
 def audit_verify() -> None:
     """Verify the audit log hash chain."""

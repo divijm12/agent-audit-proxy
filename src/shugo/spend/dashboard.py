@@ -4,11 +4,14 @@ from __future__ import annotations
 from importlib import resources
 from typing import Any
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from shugo import killswitch, paths
 from shugo.audit.log import AuditLog
+from shugo.audit.report import export_incident_report
 from shugo.spend.budget import BudgetStore
 
 # Buttons must send this header. Browsers won't let another site add a custom
@@ -52,5 +55,16 @@ def build_router(store: BudgetStore) -> APIRouter:
             return denied
         killswitch.resume(by="dashboard")
         return state()
+
+    @router.get("/export")
+    async def export(hours: int = Query(72, ge=1, le=24 * 365)) -> Response:
+        """Download the incident report. Read-only, and other sites can't read the
+        response (no CORS), so it needs no button header."""
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%MZ")
+        return Response(
+            export_incident_report(paths.audit_log(), hours=hours),
+            media_type="text/markdown; charset=utf-8",
+            headers={"content-disposition": f'attachment; filename="incident-report-{hours}h-{stamp}.md"'},
+        )
 
     return router
