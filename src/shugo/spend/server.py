@@ -178,7 +178,7 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
         async def relay() -> AsyncIterator[bytes]:
             note = None
             try:
-                async for chunk in upstream.aiter_raw():
+                async for chunk in upstream.aiter_bytes():  # decoded, matching the headers we send on
                     if halted():  # kill switch closes open streams too
                         note = "stream cut by kill switch"
                         yield _sse_error("permission_error", "halted by kill switch: stream closed")

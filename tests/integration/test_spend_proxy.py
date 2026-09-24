@@ -214,3 +214,38 @@ def test_audit_chain_verifies_after_mixed_traffic(home):
         _post(c, model="nope")
     result = verify_log(home / "audit.log")
     assert result.ok and result.entries == 6
+
+
+def test_stream_that_arrives_all_at_once_is_relayed(home):
+    raw = b"".join(_sse())
+
+    async def handler(request):
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=raw)
+
+    app = create_app(SpendConfig(upstream="https://fake.anthropic", db_path=":memory:"),
+                     transport=httpx.MockTransport(handler))
+    with TestClient(app) as c:
+        with c.stream("POST", "/v1/messages", headers={"x-agent-id": "bot"},
+                      json={"model": HAIKU, "max_tokens": 10, "stream": True, "messages": []}) as r:
+            assert b"".join(r.iter_bytes()) == raw
+
+
+def test_compressed_stream_reaches_the_agent_decompressed(home):
+    import gzip
+
+    raw = b"".join(_sse())
+
+    async def handler(request):
+        async def body():
+            yield gzip.compress(raw)
+        return httpx.Response(200, headers={"content-type": "text/event-stream", "content-encoding": "gzip"},
+                              content=body())
+
+    app = create_app(SpendConfig(upstream="https://fake.anthropic", db_path=":memory:"),
+                     transport=httpx.MockTransport(handler))
+    with TestClient(app) as c:
+        with c.stream("POST", "/v1/messages", headers={"x-agent-id": "bot"},
+                      json={"model": HAIKU, "max_tokens": 10, "stream": True, "messages": []}) as r:
+            assert "content-encoding" not in r.headers
+            assert b"".join(r.iter_bytes()) == raw
+    assert _audit(home)[0]["usage"]["output_tokens"] == 2_000
