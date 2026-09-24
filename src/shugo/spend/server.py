@@ -21,6 +21,7 @@ from shugo.approval.file_channel import FileApprovalChannel
 from shugo.audit.log import AuditLog
 from shugo.policy.engine import Decision, PolicyEngine
 from shugo.policy.loader import load_config
+from shugo.spend import auth
 from shugo.spend.budget import BudgetExceeded, BudgetStore
 from shugo.spend.config import SpendConfig
 from shugo.spend.dashboard import build_router
@@ -69,8 +70,9 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
             app.state.client = client
             yield
 
-    app = FastAPI(title="shugo spend proxy", lifespan=lifespan)
+    app = FastAPI(title="shugo spend proxy", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store = store
+    auth.install(app)
     app.include_router(build_router(store))
 
     def halted() -> bool:

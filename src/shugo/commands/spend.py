@@ -17,11 +17,29 @@ def _config(path: Path, console: Console) -> SpendConfig:
     return load_spend_config(path)
 
 
-def run_serve(config: Path, host: str, port: int, console: Console) -> None:
+LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+
+
+def refuse_open_internet(host: str, no_login: bool, console: Console) -> None:
+    """Listening beyond this machine with no password would let anyone press STOP."""
+    from shugo.spend.auth import PASSWORD_ENV, protection
+
+    if host in LOOPBACK or no_login or protection()[0]:
+        return
+    console.print(
+        f"[red]refusing to listen on {host} without a dashboard password.[/red]\n"
+        f"Set {PASSWORD_ENV} (and ideally SHUGO_AGENT_TOKEN), or pass --no-login if this "
+        "network is already private."
+    )
+    raise typer.Exit(code=2)
+
+
+def run_serve(config: Path, host: str, port: int, console: Console, no_login: bool = False) -> None:
     import uvicorn
 
     from shugo.spend.server import create_app
 
+    refuse_open_internet(host, no_login, console)
     cfg = _config(config, console)
     console.print(
         f"spend proxy on [bold]http://{host}:{port}[/bold] -> {cfg.upstream}\n"

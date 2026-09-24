@@ -139,11 +139,12 @@ def spend_serve(
     config: Path = _SPEND_CONFIG,
     host: str = typer.Option("127.0.0.1", "--host"),
     port: int = typer.Option(8787, "--port", "-p"),
+    no_login: bool = typer.Option(False, "--no-login", help="Allow a non-local host without a dashboard password"),
 ) -> None:
     """Run the spend proxy in front of the Anthropic API."""
     from shugo.commands import spend as _cmd
 
-    _cmd.run_serve(config=config, host=host, port=port, console=console)
+    _cmd.run_serve(config=config, host=host, port=port, console=console, no_login=no_login)
 
 
 @spend_app.command("status")
