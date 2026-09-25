@@ -20,6 +20,15 @@ Versions up to 0.1.0 are upstream [shugo](https://github.com/aritraghosh01/shugo
 - **Live demo** (`shugo spend demo`), Dockerfile, `fly.toml`, optional login
   (`SHUGO_DASHBOARD_PASSWORD`, `SHUGO_AGENT_TOKEN`).
 - **Evaluations** (`evals/`): runaway, red team, tamper, latency; one real-API run.
+- Install straight from GitHub: `uv tool install git+https://github.com/divijm12/agent-audit-proxy`.
+- Dashboard link-preview (Open Graph / Twitter card) tags and a favicon.
+
+### Changed
+- `shugo spend serve` explains a missing `guardrails.yaml` or an invalid `spend.yaml` instead of
+  printing a traceback.
+- CLI help describes the whole project; `--version` is read from the package metadata.
+- Examples renamed to `tool-guard/`, `runaway-agent/`, `dashboard/`; tool-guard docs install this
+  repository rather than the upstream PyPI package.
 
 ### Fixed
 - Proxy forwarded only `result.content`, dropping `structuredContent` and failing allowed calls to tools

@@ -37,16 +37,18 @@ Only do this when you mean it: agents' real API keys pass through this server.
 1. **A volume** so the spend ledger and audit log survive restarts:
    `fly volumes create shugo_data --size 1`, then in `fly.toml`:
    ```toml
-   [mounts]
+   [[mounts]]
      source = "shugo_data"
      destination = "/data"
 
    [env]
      SHUGO_HOME = "/data"
 
-   [processes]
-     app = "shugo spend serve -c /data/spend.yaml --host 0.0.0.0 --port 8080"
+   # Replace the image's default command (the demo) with the real proxy.
+   [experimental]
+     cmd = ["shugo", "spend", "serve", "-c", "/data/spend.yaml", "--host", "0.0.0.0", "--port", "8080"]
    ```
+   (Syntax per Fly's [configuration reference](https://docs.fly.io/reference/configuration/).)
 2. **Secrets** (never in a file):
    ```bash
    fly secrets set SHUGO_DASHBOARD_PASSWORD='<long random password>' \

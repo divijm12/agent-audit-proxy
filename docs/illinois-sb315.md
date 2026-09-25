@@ -1,8 +1,8 @@
-# Illinois SB 315 — what it actually says (and how we talk about it)
+# Illinois SB 315: what it says, and how it relates to this project
 
-Researched 2026-09-22 from law-firm summaries (links below). I could not load the
-bill text itself from this network, so treat anything marked *unconfirmed* as needing
-a check against the enrolled bill on ilga.gov before it goes in a pitch.
+Summarized on 2026-09-22 from published law-firm analyses (sources below), not from
+the enrolled bill text. Points marked *unconfirmed* should be checked against the bill
+on [ilga.gov](https://www.ilga.gov/) before being relied on. This is not legal advice.
 
 ## Facts
 
@@ -28,24 +28,17 @@ a check against the enrolled bill on ilga.gov before it goes in a pitch.
 - **Enforcement:** Attorney General only (no private right of action); up to **$1M**
   for a first violation, **$3M** for subsequent ones.
 
-## What this means for our project
+## How it relates to this project
 
-- Our target user (an AI startup deploying agents) is **not** covered by SB 315.
-  An agent overspending or trying `rm -rf` is **not** a "critical safety incident"
-  under the Act.
-- So the export is an **incident-style report modeled on the 72-hour format**, not
-  a regulatory filing. Don't call it "SB 315 compliant."
-- The honest pitch is that SB 315 (and similar laws in California and New York)
-  pushes frontier developers to demand audit-ready records from their ecosystem, and
-  enterprise buyers are starting to ask deployers for the same thing.
-
-## Demo line
-
-Instead of "This is what Illinois now requires":
-
-> "Illinois just gave frontier labs 72 hours to report a safety incident. Every
-> company building on those models is going to be asked the same question:
-> *what did your agents do?* This answers it in one click."
+- Companies that build agents on top of these models are **not** covered by SB 315,
+  and an agent overspending or attempting `rm -rf` is **not** a "critical safety
+  incident" under the Act.
+- The incident export is therefore an **incident-style report modeled on the 72-hour
+  timeline**, not a regulatory filing, and this project makes no claim of SB 315
+  compliance.
+- The relevance is indirect: SB 315 (like similar laws in California and New York)
+  raises expectations for audit-ready records across the AI supply chain, and
+  enterprise customers increasingly ask deployers the same questions.
 
 ## Sources
 

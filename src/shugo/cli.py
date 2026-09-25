@@ -10,7 +10,7 @@ from shugo import __version__
 
 app = typer.Typer(
     name="shugo",
-    help="SHUGO — MCP guardrails proxy. Policy-first, human approvals, hash-chained audit.",
+    help="Agent Audit Proxy: MCP tool guard (serve), Anthropic spend proxy (spend), kill switch (halt), and a hash-chained audit log with incident reports (audit).",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -48,7 +48,7 @@ def serve(
     approvals: str = typer.Option("file", "--approvals", help="Approval channel: file, http, or both"),
     approvals_port: int = typer.Option(6247, "--approvals-port", help="Port for HTTP approval UI"),
 ) -> None:
-    """Run the guard proxy over stdio."""
+    """Run the MCP tool guard over stdio (register it in your MCP client)."""
     from shugo.commands import serve as _cmd
 
     _cmd.run(config=config, console=console, approvals=approvals, approvals_port=approvals_port)
@@ -215,7 +215,7 @@ def deny(
 
 @app.command()
 def halt() -> None:
-    """Kill switch — deny all subsequent calls until unhalted."""
+    """Kill switch: freeze all tool and model calls (both proxies) until unhalted."""
     from shugo.commands import halt as _cmd
 
     _cmd.run_halt(console)
@@ -223,7 +223,7 @@ def halt() -> None:
 
 @app.command()
 def unhalt() -> None:
-    """Clear the halt sentinel."""
+    """Release the kill switch."""
     from shugo.commands import halt as _cmd
 
     _cmd.run_unhalt(console)

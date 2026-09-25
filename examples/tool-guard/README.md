@@ -20,9 +20,10 @@ export SHUGO_HOME=examples/tool-guard/.shugo-home   # keep the demo's log out of
 Expected:
 
 ```
-demo__read_file   -> OK: (pretend contents of notes.txt)
-demo__delete_file -> ERROR: Deleting files is prohibited for autonomous agents.
-demo__bash        -> ERROR: approval timed out after 5s (on_timeout=deny)
+Tools the agent can see: ['demo__read_file', 'demo__delete_file', 'demo__bash']
+demo__read_file({'path': 'notes.txt'}) -> OK: (pretend contents of notes.txt)
+demo__delete_file({'path': 'notes.txt'}) -> ERROR: Deleting files is prohibited for autonomous agents.
+demo__bash({'command': 'ls'}) -> ERROR: approval timed out after 5s (on_timeout=deny)
 ...
 OK examples/tool-guard/.shugo-home/audit.log: 3 entries verified
 ```
