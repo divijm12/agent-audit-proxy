@@ -50,11 +50,14 @@
   td.nw { white-space: nowrap; }
   .d-allow { color: var(--ok); } .d-deny { color: var(--bad); } .d-escalate, .d-halt, .d-resume { color: var(--warn); }
   .empty { color: var(--muted); }
+  .demo { background: var(--panel); border: 1px dashed var(--bar); border-radius: 12px; padding: 10px 14px;
+          margin-bottom: 16px; font-size: 14px; }
   @media (max-width: 600px) { .agent { grid-template-columns: 1fr auto; } .track { grid-column: 1 / -1; } }
 </style>
 </head>
 <body>
 <main>
+  <div id="demo" class="demo" hidden></div>
   <header>
     <div>
       <h1>Agent Audit Proxy</h1>
@@ -91,6 +94,13 @@ const money = (x) => "$" + Number(x || 0).toFixed(4);
 let halted = false;
 
 function render(s) {
+  const demo = $("demo");
+  demo.hidden = !s.demo;
+  if (s.demo) {
+    demo.textContent = `Live demo: a pretend Claude and three pretend agents, no real money. ` +
+      `Try STOP. Everything resets in ${Math.max(0, s.demo.next_reset_in_s)}s ` +
+      `(every ${s.demo.reset_every_s / 60} minutes); a STOP left on is released after ${s.demo.auto_resume_s}s.`;
+  }
   halted = !!s.halted;
   $("status").textContent = halted ? "STOPPED" : "running";
   $("status").className = "status " + (halted ? "halted" : "running");

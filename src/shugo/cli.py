@@ -147,6 +147,17 @@ def spend_serve(
     _cmd.run_serve(config=config, host=host, port=port, console=console, no_login=no_login)
 
 
+@spend_app.command("demo")
+def spend_demo(
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8787, "--port", "-p"),
+) -> None:
+    """Live demo: fake Claude + agents that never stop. Free; safe to put online."""
+    from shugo.commands import spend as _cmd
+
+    _cmd.run_demo(host=host, port=port, console=console)
+
+
 @spend_app.command("status")
 def spend_status(config: Path = _SPEND_CONFIG) -> None:
     """Show each agent's spend against its budget."""

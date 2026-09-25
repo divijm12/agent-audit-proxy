@@ -21,13 +21,13 @@ CSRF_HEADER = "x-shugo-dashboard"
 RECENT_ROWS = 50
 
 
-def build_router(store: BudgetStore) -> APIRouter:
+def build_router(store: BudgetStore, demo: dict[str, Any] | None = None) -> APIRouter:
     router = APIRouter()
     page = resources.files("shugo.spend").joinpath("dashboard.html").read_text("utf-8")
 
     def state() -> dict[str, Any]:
         rows = AuditLog(paths.audit_log()).tail(RECENT_ROWS)
-        return {**killswitch.status(), "agents": store.status(), "audit": rows[::-1]}
+        return {**killswitch.status(), "agents": store.status(), "audit": rows[::-1], "demo": demo}
 
     def guarded(request: Request) -> JSONResponse | None:
         if request.headers.get(CSRF_HEADER) != "1":

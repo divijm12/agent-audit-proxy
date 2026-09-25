@@ -48,6 +48,16 @@ def run_serve(config: Path, host: str, port: int, console: Console, no_login: bo
     uvicorn.run(create_app(cfg), host=host, port=port, log_level="warning")
 
 
+def run_demo(host: str, port: int, console: Console) -> None:
+    import uvicorn
+
+    from shugo.spend.demo import create_demo_app
+
+    app = create_demo_app()
+    console.print(f"live demo on [bold]http://{host}:{port}/dashboard[/bold] (pretend Claude, no real money)")
+    uvicorn.run(app, host=host, port=port, log_level="warning")
+
+
 def _store(cfg: SpendConfig) -> BudgetStore:
     return BudgetStore(
         cfg.ledger_path(),

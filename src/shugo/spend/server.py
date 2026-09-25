@@ -6,11 +6,13 @@ the proxy never stores it.
 """
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Callable
+from typing import Any, AsyncIterator, Awaitable, Callable
 
 import httpx
 from fastapi import FastAPI, Request
@@ -51,7 +53,13 @@ def _sse_error(err_type: str, message: str) -> bytes:
     return f"event: error\ndata: {data}\n\n".encode()
 
 
-def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
+def create_app(
+    cfg: SpendConfig,
+    *,
+    transport: httpx.AsyncBaseTransport | None = None,
+    background: Callable[[FastAPI], Awaitable[None]] | None = None,
+    demo: dict[str, Any] | None = None,
+) -> FastAPI:
     prices = PriceTable(cfg.all_prices())
     store = BudgetStore(
         cfg.ledger_path(),
@@ -68,12 +76,19 @@ def create_app(cfg: SpendConfig, *, transport: httpx.AsyncBaseTransport | None =
             base_url=cfg.upstream, transport=transport, timeout=httpx.Timeout(600.0, connect=10.0)
         ) as client:
             app.state.client = client
-            yield
+            task = asyncio.create_task(background(app)) if background else None
+            try:
+                yield
+            finally:
+                if task:
+                    task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
 
     app = FastAPI(title="shugo spend proxy", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store = store
     auth.install(app)
-    app.include_router(build_router(store))
+    app.include_router(build_router(store, demo=demo))
 
     def halted() -> bool:
         return killswitch.is_halted()
