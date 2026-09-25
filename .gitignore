@@ -16,3 +16,6 @@ examples/phase1/.shugo-home/
 *.log.lock
 examples/phase2/.shugo-home/
 examples/phase3/.shugo-home/
+
+# Secrets (e.g. ANTHROPIC_API_KEY for the real test) never go to GitHub
+.env
