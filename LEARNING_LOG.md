@@ -312,3 +312,48 @@ The first eval run crashed. The proxy relayed streams as "raw" bytes, which
 compressed. Unreadable output, if Anthropic ever compressed a stream. One-line
 fix, two tests. Evals aren't just for the README; they're also a very good way
 to find bugs.
+
+---
+
+## Phase 5 (part 1) — Getting ready to go online (2026-09-24)
+
+### The README is the product
+
+Most people will only ever read the front page. So it's written like a product
+spec, not a manual: the problem in two sentences, a diagram, **the numbers**,
+what it costs, and a section most projects skip, **what it can't do**. Every
+number in it comes from `evals/RESULTS.md`, and every claim about another tool
+was checked (e.g. Anthropic's Console has monthly spend limits per workspace,
+but not per agent). Honest limits make the good numbers more believable, not less.
+
+### Locking the door before opening it
+
+On your laptop the dashboard is only reachable by you. On the internet it isn't.
+Two secrets, set as environment variables (never in a file that could end up on
+GitHub):
+
+- a **dashboard password**, so strangers can't press STOP or read the log,
+- an **agent token**, so strangers can't route their own AI traffic through
+  your proxy.
+
+And a guard rail for the guard rail: `shugo spend serve` **refuses** to listen on
+the open internet without a password. Mistakes should be hard to make.
+
+### A demo you can hand to anyone
+
+A live link that uses real Claude would cost money every time someone visits,
+and would need your API key on a server. So `shugo spend demo` runs a pretend
+Claude and three pretend agents inside one program. Visitors can press STOP,
+watch the bars, export a report, and it costs nothing. It tidies up after
+itself: resets every 5 minutes, and releases a STOP someone forgot about. It
+also always uses its own throwaway folder, because a demo that "resets the
+audit log" must never be able to reset a *real* one.
+
+### Docker without Docker
+
+A `Dockerfile` is a recipe for packaging the app so any server can run it.
+Docker isn't installed here, so instead of "it probably works" we replayed the
+recipe by hand: a clean folder with only the files the recipe copies, the
+exact locked install, then started the demo and checked it served pages. We
+also confirmed both base images actually exist in their registries. Fly.io
+will do the real build.

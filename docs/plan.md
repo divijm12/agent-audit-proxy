@@ -80,6 +80,14 @@ file) and write to the same audit log.
    - Found on the way: stream relay forwarded compressed bytes without their header
      (fixed: relay decoded bytes).
    - README still to be rewritten with these numbers (Phase 5).
-5. **Deploy + README.** Login in front of the dashboard before it's reachable
-   from the internet. Dockerfile, Fly.io; README with real numbers; **one real
-   Claude Haiku 4.5 run capped at $0.30 total** (agent budget set below that, e.g. $0.10) to prove the budget stop; then make the repo public.
+5. **In progress. Deploy + README.**
+   - Done (2026-09-24): README rewritten as a product spec (problem, diagram, eval
+     numbers, cost, failure modes, comparison; shugo's README kept in
+     docs/shugo-README.md). Login for internet-facing use (dashboard password,
+     agent token; `serve` refuses a public host without one). `shugo spend demo`:
+     self-contained live demo (fake Claude, looping agents, resets). Dockerfile
+     (demo by default) + fly.toml + docs/deploy.md; image steps checked locally
+     without Docker.
+   - Waiting on the owner: Fly.io account + `fly auth login`, then `fly deploy`;
+     the **one real Claude Haiku 4.5 run capped at $0.30 total** (agent budget ~$0.10),
+     after showing the exact plan; then make the repo public; demo video.

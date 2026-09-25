@@ -1,285 +1,120 @@
-<div align="center">
+# Agent Audit Proxy
 
-<img src="assets/shugo-banner.png" alt="SHUGO — /shoo-go/ · noun · Japanese · guardian / protection. Minimal guardrails framework, fully modular, teaches you to govern agents." width="900">
+**A spending limit, an emergency stop and a tamper-evident flight recorder for AI agents.**
+It sits between your agents and Claude / their tools, enforces your rules on every call, and
+hands you a report of exactly what they did.
 
-<br><br>
+![Dashboard: per-agent spend bars, STOP button, live audit trail](docs/img/dashboard.jpg)
 
-<h3>A practical, readable AI agent guardrails framework —<br>and a working example of how agents should be governed.</h3>
+> **Live demo:** coming soon (a free demo with a pretend Claude: press STOP, watch it hold).
+> Run it yourself in one line: `shugo spend demo`.
 
-<a href="docs/">Documentation</a> · <a href="#-quickstart">Quickstart</a> · <a href="#-repo-structure">Repo Structure</a> · <a href="policies/">Policies</a> · <a href="#️-roadmap">Roadmap</a>
+## The problem
 
-<br>
+An agent is a loop: ask the model what to do, do it, repeat. Left alone, that loop can
+spend $50 overnight re-asking the same question, or run `rm -rf` because a web page told
+it to. Enterprise buyers now ask AI startups two questions before signing: *what stops your
+agents going rogue?* and *can you prove what they did?*
 
-<a href="https://pypi.org/project/shugo/0.1.0/"><img src="https://img.shields.io/badge/pypi-v0.1.0-A03A26?style=flat-square&logo=pypi&logoColor=white" alt="PyPI v0.1.0"></a>
-<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-A03A26?style=flat-square" alt="MIT License"></a>
-<a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-native-0E1A2B?style=flat-square" alt="MCP native"></a>
-<a href="https://github.com/aritraghosh01/shugo/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/release-v0.1.0-1F6F4A?style=flat-square" alt="Release v0.1.0"></a>
-<a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-1F6F4A?style=flat-square" alt="PRs welcome"></a>
+## What it does
 
-<br><br>
-
-```bash
-uvx shugo init      # scaffold guardrails.yaml from your existing MCP config
-uvx shugo serve     # start guarding
-```
-
-<sub>Available on PyPI as <a href="https://pypi.org/project/shugo/"><code>shugo</code></a> · latest version <b>0.1.0</b> (2026-07-30)</sub>
-
-</div>
-
-<br>
-
----
-
-<table>
-<tr>
-<td width="42%" valign="top">
-
-<h2>🛡️ What is SHUGO?</h2>
-
-<p>SHUGO is a guardrails-first framework for the agentic AI community.</p>
-
-<p>It helps teams define policies, approval gates, tool access, evaluation, observability, and incident response in one repo.</p>
-
-<p>It is designed to make AI agent behaviour <b>bounded, visible, and accountable</b>.</p>
-
-<p>Responsible AI should not live in a slide deck. It should live in the same repo as the agent — expressed as code, enforced at runtime, and producing evidence by default.</p>
-
-</td>
-<td width="58%" valign="top">
-
-<pre><code>shugo_repo  ->  shugo_policy  ->  shugo_runtime</code></pre>
-
-<h2>📁 Repo Structure</h2>
-
-<table>
-<tr><td><code>src/shugo/</code></td><td>Proxy, policy engine, audit, CLI</td></tr>
-<tr><td><code>policies/</code></td><td>Policy rules and standards</td></tr>
-<tr><td><code>examples/</code></td><td>Runnable demo agents and configs</td></tr>
-<tr><td><code>evaluations/</code></td><td>Tests, evals, and benchmarks</td></tr>
-<tr><td><code>logs/</code></td><td>Runtime events and audit logs</td></tr>
-<tr><td><code>docs/</code></td><td>Quickstart, policy guide, layers</td></tr>
-<tr><td><code>guardrails.yaml</code></td><td>Guardrail configuration</td></tr>
-<tr><td><code>incident-playbook.md</code></td><td>Incident response and recovery</td></tr>
-<tr><td><code>README.md</code></td><td>Project overview and getting started</td></tr>
-</table>
-
-</td>
-</tr>
-</table>
-
-<div align="center">
-
-> **A guardrail should not merely tell an agent what it *should* do.**<br>
-> **The system should enforce what the agent is *allowed* to do.**
-
-</div>
-
----
-
-<h2>🧱 Five Guardrail Layers</h2>
-
-<table>
-<tr>
-<td width="20%" valign="top"><h4>👤 Identity<br>& Access</h4></td>
-<td width="20%" valign="top"><h4>🗄️ Data<br>& Context</h4></td>
-<td width="20%" valign="top"><h4>🔧 Action<br>& Autonomy</h4></td>
-<td width="20%" valign="top"><h4>🛡️ Safety<br>& Resilience</h4></td>
-<td width="20%" valign="top"><h4>🎖️ Governance<br>& Assurance</h4></td>
-</tr>
-<tr>
-<td valign="top">Verify who and what can act, with least privilege and strong authentication.</td>
-<td valign="top">Control what data enters the agent and how context is handled.</td>
-<td valign="top">Restrict tools, enforce policies, and require approvals for high-risk actions.</td>
-<td valign="top">Detect, block, and recover from unsafe behaviour and system failures.</td>
-<td valign="top">Audit, evaluate, and report to ensure accountability and continuous trust.</td>
-</tr>
-<tr>
-<td align="center"><sub>v0.1 · partial</sub></td>
-<td align="center"><sub>v0.1 · partial</sub></td>
-<td align="center"><sub>v0.1 · <b>full</b></sub></td>
-<td align="center"><sub>v0.1 · partial</sub></td>
-<td align="center"><sub>v0.1 · <b>full</b></sub></td>
-</tr>
-</table>
-
-Layers ③ and ⑤ ship complete in v0.1. The others ship at the minimum depth needed to make those two credible, then deepen along the roadmap.
-
----
-
-## ⚙️ How it works
-
-SHUGO presents itself to your agent as a standard MCP server and sits between the agent and the tools it calls. Every `tools/call` is evaluated against a human-readable policy file before it reaches an upstream server. No protocol changes. No agent code changes.
-
-```
-┌──────────────┐   MCP    ┌───────────┐   MCP    ┌──────────────────┐
-│  MCP client  │ ───────▶ │   SHUGO   │ ───────▶ │ Upstream MCP     │
-│ (any agent)  │ ◀─────── │   guard   │ ◀─────── │ servers (n)      │
-└──────────────┘          └─────┬─────┘          └──────────────────┘
-                                │
-                    ┌───────────┼───────────┐
-                    ▼           ▼           ▼
-              guardrails    audit log    approval
-                 .yaml      (JSONL)       channel
-```
-
-Works with Claude Desktop, Claude Code, Cursor, VS Code, and any framework with an MCP adapter — LangGraph, CrewAI, the OpenAI Agents SDK, n8n.
-
----
-
-## ⚡ Quickstart
-
-```bash
-uvx shugo init      # scaffold a policy from your existing MCP config
-uvx shugo serve     # start guarding
-```
-
-Point your MCP client at SHUGO instead of your servers:
-
-```json
-{
-  "mcpServers": {
-    "shugo": {
-      "command": "uvx",
-      "args": ["shugo", "serve", "--config", "guardrails.yaml"]
-    }
-  }
-}
-```
-
-Your agent now sees only the tools policy allows, blocks on anything needing approval, and writes an audit record for every call it makes.
-
----
-
-## 📜 Policy as code
-
-The most important file in the project. Design target: **a risk lead can read it unaided, and a reviewer can diff it in a pull request.**
-
-```yaml
-version: "0.1"
-
-defaults:
-  decision: deny            # deny by default; allowlist upward
-  on_error: deny            # fail closed
-
-rules:
-  - id: read-only-github
-    match:
-      server: github
-      tool: ["get_*", "list_*", "search_*"]
-    decision: allow
-
-  - id: no-force-push
-    description: Force push can destroy history irrecoverably
-    match:
-      server: github
-      tool: push
-      args: { force: true }
-    decision: deny
-    reason: Force push is prohibited for autonomous agents.
-    controls: [OWASP-LLM06, NIST-AI-RMF-MANAGE-2.2]
-
-  - id: ticket-write-needs-approval
-    match:
-      server: tickets
-      tool: ["update_ticket", "close_ticket"]
-    decision: escalate
-    approval:
-      channel: cli
-      timeout_seconds: 300
-      on_timeout: deny
-    controls: [EU-AI-ACT-ART-14]
-```
-
-Deny by default. First match wins, top to bottom. Globs, not regex — readability is the constraint.
-
----
-
-## 🧾 Evidence, not just logs
-
-Enforcement without evidence is unauditable. Evidence without enforcement is theatre. SHUGO does both.
-
-```bash
-shugo evidence --framework owasp-llm --since 30d --out evidence/
-```
-
-Reads the audit log and produces a control-by-control bundle: which rules were in force, how often each fired, approval latency, exceptions, coverage gaps, and a hash-chain integrity check.
-
-Framework mappings ship as data files sourced from **public** standards only — NIST AI RMF, EU AI Act, OWASP Top 10 for LLM Applications, and ISO/IEC 42001 control identifiers.
-
-> **Scope note.** SHUGO produces evidence *about the guardrail layer*. It does not certify an organisation as compliant with any standard.
-
----
-
-## 🧰 CLI
-
-| Command | Purpose |
+| Job | How |
 |---|---|
-| `shugo serve` | Run the guard proxy |
-| `shugo init` | Scaffold a starter policy from installed MCP servers |
-| `shugo validate` | Lint and schema-check the policy file |
-| `shugo explain` | Dry-run a call — see which rule fires and why |
-| `shugo audit tail` / `verify` | Inspect the log, verify the hash chain |
-| `shugo evidence` | Generate an evidence bundle |
-| `shugo halt` | Kill switch — deny all calls immediately |
+| **Spending limit** | Every Claude call goes through a proxy that prices it from the real token usage and refuses the next call once an agent's budget can't cover it. |
+| **Permission rules** | Every tool call, whether through MCP or asked for directly in Claude's reply, is checked against one `guardrails.yaml`: **allow**, **deny** (with a reason the agent sees), or **ask a human**. |
+| **Kill switch** | One button (or `shugo halt`) freezes all model and tool calls at once and cuts off replies already streaming. |
+| **Audit log + report** | Every decision is appended to a SHA-256 hash-chained log. One click exports a 72-hour incident report with an integrity check. |
 
----
+## How it works
 
-## 📦 Release notes — v0.1.0 (2026-07-30)
+```
+                      ┌──────────────────────────────┐
+  agent ──── MCP ────▶│ tool guard (shugo serve)     │──▶ MCP tool servers
+    │                 │ rules · approvals · STOP     │
+    │                 └───────────────┬──────────────┘
+    │                                 ▼ writes
+    │                       one hash-chained audit log ◀── dashboard · 72h report
+    │                                 ▲ writes
+    │                 ┌───────────────┴──────────────┐
+    └─ ANTHROPIC_ ───▶│ spend proxy (shugo spend)    │──▶ api.anthropic.com
+       BASE_URL       │ STOP · budget · price · rules│
+                      │ on tool_use in replies       │
+                      └──────────────────────────────┘
+```
 
-First release. Everything in the sections above is now real code you can install with `uvx shugo`.
+An agent changes one setting (`ANTHROPIC_BASE_URL`) and names itself with an `x-agent-id`
+header. No code changes. Its own API key passes through; the proxy never stores it.
 
-**What ships:**
+## Numbers
 
-- **Guard proxy over stdio** — SHUGO speaks MCP to both your client and any number of upstream servers, namespaces tools as `<server>__<tool>`, and applies policy on every `tools/call`.
-- **Policy engine** — deny-by-default, first-match-wins, `fnmatch` globs on server/tool, nested-equality on args. Decisions: `allow`, `deny`, `escalate`.
-- **Human approvals** — file-drop queue at `~/.shugo/pending/` resolved by either `shugo approve --watch` (Rich TUI) or an opt-in local HTTP UI (`shugo serve --approvals http`).
-- **Hash-chained audit log** — append-only JSONL, rolling SHA-256, NFC-canonical JSON, per-line `fsync`. `shugo audit verify` detects any post-hoc edit.
-- **Evidence bundles** — `shugo evidence -f <owasp-llm|nist-ai-rmf|eu-ai-act|iso-42001>` produces a control-mapped report, policy snapshot, filtered audit-log window, and SHA-256 manifest.
-- **`shugo init`** — reads Claude Desktop / Code / Cursor / VS Code MCP configs, enumerates upstream tools, writes a starter policy, prints the exact JSON snippet to paste.
-- **Kill switch** — `shugo halt` denies everything until `shugo unhalt`.
+From [`evals/RESULTS.md`](evals/RESULTS.md). Reproduce with `.venv/bin/python evals/run_evals.py`
+(fake Claude, $0).
 
-**Quality:** 102 fast tests + 1 e2e test (real `@modelcontextprotocol/server-filesystem` via `npx`). CI on Python 3.11–3.13 × macOS / Ubuntu / Windows. All dependencies MIT / BSD-3 / Apache-2.0; no copyleft, no BSL.
-
-Full changelog: [CHANGELOG.md](CHANGELOG.md) · GitHub release: [v0.1.0](https://github.com/aritraghosh01/shugo/releases/tag/v0.1.0)
-
----
-
-## 🗺️ Roadmap
-
-| Version | Theme | Status |
+| Eval | Target | Result |
 |---|---|---|
-| **v0.1** | Guard proxy, policy engine, approvals, audit log, evidence packs | ✅ released 2026-07-30 |
-| v0.2 | Layer ① depth — OAuth 2.1 / OIDC identity, per-principal policy, delegation scoping | planned |
-| v0.3 | Layer ② depth — retrieval boundaries, context filters, memory access rules | planned |
-| v0.4 | Layer ④ depth — injection detection, output validation, rollback | planned |
-| v0.5 | Layer ⑤ depth — policy regression suites, adversarial harness | planned |
-| v1.0 | Frozen policy schema, semantic versioning guarantee, plugin API | planned |
+| Runaway agent: $0.50 budget, loop worth $50 | stop at budget | **stopped at $0.48** (16 calls). Growing-cost loop: $0.48 |
+| Dangerous tool calls blocked (20 attacks × plain + streaming) | 100% | **40 / 40** |
+| Harmless tool calls wrongly blocked (10 × 2) | 0% | **0 / 20** |
+| Log tampering caught (7 attack types) | all | **7 / 7** with a saved chain head (5 / 7 by the chain alone) |
+| Latency added per call, p50 / p95 | < 20 ms | **1.3 / 1.5 ms**; first streamed byte **0.7 / 0.9 ms** |
 
----
+## Try it
 
-## 🤝 Contributing
+```bash
+git clone https://github.com/divijm12/agent-audit-proxy && cd agent-audit-proxy
+uv sync --extra dev
+.venv/bin/shugo spend demo                              # live demo at :8787/dashboard
+.venv/bin/python examples/phase2/run_demo.py            # a runaway agent hits its budget
+```
 
-SHUGO is built in public, and the contribution ladder is deliberately low to the ground:
+Real agents: `shugo spend serve -c spend.yaml`, then `ANTHROPIC_BASE_URL=http://127.0.0.1:8787`.
+Walkthroughs in [`examples/`](examples/); deployment (Fly.io, login) in [`docs/deploy.md`](docs/deploy.md).
 
-**policy pack → scenario test → framework mapping → core**
+## Cost
 
-A new policy pack is a self-contained YAML file. You do not need to read the codebase to ship one. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) and the [good first issues](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+- **To run:** one small machine. The demo scales to zero on Fly.io when nobody's looking.
+- **Per call:** ~1.3 ms of added latency; no extra model calls.
+- **Pricing table:** Anthropic's published per-token rates, including cache reads/writes
+  ([`prices.yaml`](src/shugo/spend/prices.yaml)). Unknown models are refused by default rather than guessed.
 
----
+## Failure modes and trade-offs
 
-## 📄 License
+- **Budgets are enforced before a call, but costs are only known after.** The proxy estimates
+  the next call from the agent's previous one. That's exact for loops, but an agent's very first call,
+  or a call much pricier than the last, can overshoot by that difference. Budgets are lifetime
+  totals (no daily reset yet).
+- **It only sees what passes through it.** If an agent's own code deletes a file without
+  Claude asking for it, no proxy can see that.
+- **Regex rules can be dodged; allow-lists can't.** The red-team policy allows a short list of
+  safe actions and denies the rest. The same person wrote the policy and the attacks, so 40/40
+  shows the mechanism works; it doesn't prove a determined attacker can't find a gap.
+- **The hash chain is tamper-*evident*, not tamper-proof.** Without a secret key, someone who
+  can edit the file can recompute every later hash or cut entries off the end. Saving the chain
+  head elsewhere (`shugo audit verify --anchor`) catches both.
+- **Blocked tool calls are rewritten into text.** Claude reads the reason and adapts. The newest models
+  (e.g. Opus 5.5) may reject a conversation whose history was edited; use `on_deny: error` for those.
+- **Single machine.** The spend ledger is SQLite; don't scale it horizontally.
 
-Released under the [MIT License](LICENSE). Use it, fork it, adapt it to your own agent architecture — that is the point.
+## How it compares
 
----
+LiteLLM, Portkey, Helicone and Bifrost give per-key budgets, logging and routing across many
+providers. Anthropic's Console has monthly spend limits per workspace, but not per agent. [agentguard](https://github.com/agentwares/agentguard)
+(TypeScript, Sept 2026) covers similar ground for MCP. This project's angle: one STOP button for
+**both** model and tool calls, rules applied to tool calls inside Claude's replies (not just MCP),
+per-agent budgets that stop a loop *before* it crosses the line, and an incident report with a
+verifiable log. It's Anthropic-only for now.
 
-<div align="center">
+## On compliance
 
-<img src="assets/shugo-quote.png" alt="Capability makes an agent useful. Guardrails make it deployable." width="900">
+Illinois' AI Safety Measures Act (SB 315, signed July 2026) gives **frontier model developers**
+72 hours to report a critical safety incident. It doesn't cover companies building on those
+models, but buyers are starting to ask them the same question. The export is modeled on that
+timeline; it is not a regulatory filing. Notes and sources: [`docs/illinois-sb315.md`](docs/illinois-sb315.md).
 
-<br>
+## Credits
 
-<sub>守護 — <em>shugo</em>, to guard and protect.</sub>
-
-</div>
+Built on [shugo](https://github.com/aritraghosh01/shugo) by aritraghosh01 (MIT): the MCP tool
+guard, policy engine, approvals and hash-chained log. Its original README is in
+[`docs/shugo-README.md`](docs/shugo-README.md). Fixes found here were sent upstream
+([#13](https://github.com/aritraghosh01/shugo/pull/13), [#14](https://github.com/aritraghosh01/shugo/pull/14)).
+Spend limits inspired by [costfuse](https://github.com/costfuse/costfuse). MIT licensed.
