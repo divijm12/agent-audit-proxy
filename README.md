@@ -48,12 +48,14 @@ header. No code changes. Its own API key passes through; the proxy never stores 
 
 ## Numbers
 
-From [`evals/RESULTS.md`](evals/RESULTS.md). Reproduce with `.venv/bin/python evals/run_evals.py`
-(fake Claude, $0).
+From [`evals/RESULTS.md`](evals/RESULTS.md) (fake Claude, $0: `.venv/bin/python evals/run_evals.py`) and
+one real-API run ([`evals/real_test_result.json`](evals/real_test_result.json), $0.098:
+`evals/real_claude_test.py`, which caps itself at $0.30 whatever the proxy does).
 
 | Eval | Target | Result |
 |---|---|---|
-| Runaway agent: $0.50 budget, loop worth $50 | stop at budget | **stopped at $0.48** (16 calls). Growing-cost loop: $0.48 |
+| **Real Claude Haiku 4.5**: runaway agent, $0.10 budget | stop at budget | **stopped at $0.098** after 11 real calls; the proxy's ledger matched the actual bill to the cent |
+| Runaway agent (fake Claude): $0.50 budget, loop worth $50 | stop at budget | **stopped at $0.48** (16 calls). Growing-cost loop: $0.48 |
 | Dangerous tool calls blocked (20 attacks × plain + streaming) | 100% | **40 / 40** |
 | Harmless tool calls wrongly blocked (10 × 2) | 0% | **0 / 20** |
 | Log tampering caught (7 attack types) | all | **7 / 7** with a saved chain head (5 / 7 by the chain alone) |

@@ -357,3 +357,36 @@ recipe by hand: a clean folder with only the files the recipe copies, the
 exact locked install, then started the demo and checked it served pages. We
 also confirmed both base images actually exist in their registries. Fly.io
 will do the real build.
+
+---
+
+## Phase 5 (part 2) — The real test, and a leaked key (2026-09-25)
+
+### Ten cents of proof
+
+Everything before this used a pretend Claude. One run on the real API turns
+"it should work" into "it did": a runaway agent looped on **real Claude Haiku
+4.5** through the proxy with a $0.10 budget. It made 11 real calls and was
+refused on the 12th at **$0.098**, under the limit. Two separate calculations of
+the cost, the proxy's ledger and the test script's own count from the real
+`usage` numbers, agreed to five decimal places. Total spent: about ten cents.
+
+### Test the safety net, not just the thing
+
+The test script has its **own** spending cap, separate from the proxy it's
+testing: if the proxy were broken, the script would still stop before $0.30.
+The first version estimated call size as "characters ÷ 3". That's a guess, and
+text full of timestamps can use more tokens than that. A safety cap can't rest
+on a guess, so it now assumes the true worst case, one token per character,
+which can't be exceeded for plain text. Then we rehearsed the whole run against
+the fake Claude before spending a cent.
+
+### When a secret ends up in the chat
+
+An API key got pasted into the conversation. Once a secret has been written
+somewhere it shouldn't be (a chat, a commit, a screenshot), the only safe
+assumption is that it's leaked. So: revoke it, make a new one, and hand the new
+one over through a channel that doesn't record it: a private `.env` file
+(readable only by you, and listed in `.gitignore` so git will never upload it).
+We checked the file was private, ignored by git and a *different* key, without
+ever printing the key itself.

@@ -90,5 +90,7 @@ file) and write to the same audit log.
      without Docker.
    - Done (2026-09-25): live demo deployed to https://agent-audit-proxy-demo.fly.dev
      (one machine, scales to zero; STOP/RESUME, export and HTTPS redirect checked live).
-   - Waiting on the owner: the **one real Claude Haiku 4.5 run capped at $0.30 total** (agent budget ~$0.10),
-     after showing the exact plan; then make the repo public; demo video.
+   - Done (2026-09-25): the one real-API test. Claude Haiku 4.5, agent budget $0.10,
+     script hard cap $0.30: 11 real calls, stopped by the proxy at $0.09807; the proxy's
+     ledger equalled the script's independent total; audit chain OK. Total spent: $0.098.
+   - Waiting on the owner: make the repo public; demo video.

@@ -1,0 +1,81 @@
+{
+  "mode": "real Anthropic API",
+  "ran_at": "2026-09-25 01:22 UTC",
+  "model": "claude-haiku-4-5",
+  "agent_budget_usd": 0.1,
+  "hard_cap_usd": 0.3,
+  "calls_allowed": 11,
+  "script_total_usd": 0.09807,
+  "proxy_ledger_usd": 0.09807,
+  "stopped_by": "proxy: 402 billing_error: budget exceeded for agent 'runaway-bot': spent $0.0981 of $0.10, and the next call is estimated at ~$0.0089",
+  "audit_log_ok": true,
+  "audit_entries": 12,
+  "calls": [
+    {
+      "call": 1,
+      "input_tokens": 8766,
+      "output_tokens": 27,
+      "cost_usd": 0.0089
+    },
+    {
+      "call": 2,
+      "input_tokens": 8766,
+      "output_tokens": 31,
+      "cost_usd": 0.00892
+    },
+    {
+      "call": 3,
+      "input_tokens": 8766,
+      "output_tokens": 26,
+      "cost_usd": 0.0089
+    },
+    {
+      "call": 4,
+      "input_tokens": 8766,
+      "output_tokens": 29,
+      "cost_usd": 0.00891
+    },
+    {
+      "call": 5,
+      "input_tokens": 8766,
+      "output_tokens": 29,
+      "cost_usd": 0.00891
+    },
+    {
+      "call": 6,
+      "input_tokens": 8766,
+      "output_tokens": 31,
+      "cost_usd": 0.00892
+    },
+    {
+      "call": 7,
+      "input_tokens": 8766,
+      "output_tokens": 29,
+      "cost_usd": 0.00891
+    },
+    {
+      "call": 8,
+      "input_tokens": 8766,
+      "output_tokens": 36,
+      "cost_usd": 0.00895
+    },
+    {
+      "call": 9,
+      "input_tokens": 8766,
+      "output_tokens": 31,
+      "cost_usd": 0.00892
+    },
+    {
+      "call": 10,
+      "input_tokens": 8766,
+      "output_tokens": 31,
+      "cost_usd": 0.00892
+    },
+    {
+      "call": 11,
+      "input_tokens": 8766,
+      "output_tokens": 29,
+      "cost_usd": 0.00891
+    }
+  ]
+}
