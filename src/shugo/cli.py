@@ -35,7 +35,7 @@ def _root(
     version: bool = typer.Option(False, "--version", "-V", help="Show version and exit."),
 ) -> None:
     if version:
-        console.print(f"shugo {__version__}")
+        console.print(f"shugo {__version__}", highlight=False)
         raise typer.Exit()
     if ctx.invoked_subcommand is None:
         console.print(ctx.get_help())
