@@ -1,123 +1,200 @@
 # Agent Audit Proxy
 
-**A spending limit, an emergency stop and a tamper-evident flight recorder for AI agents.**
-It sits between your agents and Claude / their tools, enforces your rules on every call, and
-hands you a report of exactly what they did.
+[![CI](https://github.com/divijm12/agent-audit-proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/divijm12/agent-audit-proxy/actions/workflows/ci.yml)
+![Python 3.11–3.13](https://img.shields.io/badge/python-3.11%E2%80%933.13-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-![Dashboard: per-agent spend bars, STOP button, live audit trail](docs/img/dashboard.jpg)
+Runtime governance for AI agents built on Claude: **per-agent spending limits, tool-call
+permissions, a global kill switch, and a tamper-evident audit trail** with one-click incident
+reports. It runs as a proxy between your agents, the Anthropic API and your MCP tool servers,
+so existing agents are governed without code changes.
 
-> **Live demo: [agent-audit-proxy-demo.fly.dev/dashboard](https://agent-audit-proxy-demo.fly.dev/dashboard)**
-> A pretend Claude and three pretend agents, no real money. Press STOP, watch them get blocked,
-> export the report. Resets every 5 minutes (the first visit may take a few seconds to wake it).
+**Live demo:** [agent-audit-proxy-demo.fly.dev/dashboard](https://agent-audit-proxy-demo.fly.dev/dashboard)
+(simulated model and agents; no real API calls; resets every five minutes)
 
-## The problem
+![Dashboard showing per-agent spend, the kill switch and the live audit trail](docs/img/dashboard.jpg)
 
-An agent is a loop: ask the model what to do, do it, repeat. Left alone, that loop can
-spend $50 overnight re-asking the same question, or run `rm -rf` because a web page told
-it to. Enterprise buyers now ask AI startups two questions before signing: *what stops your
-agents going rogue?* and *can you prove what they did?*
+## Why
 
-## What it does
+An autonomous agent repeats a loop: ask the model what to do, execute it, repeat. Unsupervised,
+that loop can exhaust a budget overnight or execute a destructive command suggested by untrusted
+input. Teams selling agents to enterprises are increasingly asked to show both **controls** (what
+prevents this?) and **evidence** (what exactly did the agent do?). This project provides both.
 
-| Job | How |
+## Features
+
+| Capability | Description |
 |---|---|
-| **Spending limit** | Every Claude call goes through a proxy that prices it from the real token usage and refuses the next call once an agent's budget can't cover it. |
-| **Permission rules** | Every tool call, whether through MCP or asked for directly in Claude's reply, is checked against one `guardrails.yaml`: **allow**, **deny** (with a reason the agent sees), or **ask a human**. |
-| **Kill switch** | One button (or `shugo halt`) freezes all model and tool calls at once and cuts off replies already streaming. |
-| **Audit log + report** | Every decision is appended to a SHA-256 hash-chained log. One click exports a 72-hour incident report with an integrity check. |
+| **Spending limits** | Every model call is priced from the usage Anthropic reports. Each agent has a budget; a call that would exceed it is refused before it is sent. |
+| **Tool permissions** | Every tool call is evaluated against a single YAML policy: `allow`, `deny` (with a reason returned to the agent), or `escalate` to a human. Covers MCP tools and tools defined directly in API requests. |
+| **Kill switch** | One control (dashboard or `shugo halt`) freezes all model and tool calls immediately, including responses that are mid-stream. |
+| **Audit trail** | Every decision is appended to a SHA-256 hash-chained log, verifiable end to end and against a saved anchor. |
+| **Incident reports** | One-click export of the last *N* hours: totals, per-agent spend, blocked actions, kill-switch events, the full trail, and an integrity check. |
 
-## How it works
+## Architecture
 
 ```
-                      ┌──────────────────────────────┐
-  agent ──── MCP ────▶│ tool guard (shugo serve)     │──▶ MCP tool servers
-    │                 │ rules · approvals · STOP     │
-    │                 └───────────────┬──────────────┘
-    │                                 ▼ writes
-    │                       one hash-chained audit log ◀── dashboard · 72h report
-    │                                 ▲ writes
-    │                 ┌───────────────┴──────────────┐
-    └─ ANTHROPIC_ ───▶│ spend proxy (shugo spend)    │──▶ api.anthropic.com
-       BASE_URL       │ STOP · budget · price · rules│
-                      │ on tool_use in replies       │
-                      └──────────────────────────────┘
+                         ┌───────────────────────────────┐
+   Agent ───── MCP ─────▶│ Tool guard      (shugo serve) │────▶ MCP tool servers
+     │                   │ policy · approvals · halt     │
+     │                   └───────────────┬───────────────┘
+     │                                   ▼
+     │                        Hash-chained audit log ◀──── Dashboard · incident reports
+     │                                   ▲
+     │                   ┌───────────────┴───────────────┐
+     └── Messages API ──▶│ Spend proxy     (shugo spend) │────▶ api.anthropic.com
+     (ANTHROPIC_BASE_URL)│ halt · budget · pricing ·     │
+                         │ policy on tool_use responses  │
+                         └───────────────────────────────┘
 ```
 
-An agent changes one setting (`ANTHROPIC_BASE_URL`) and names itself with an `x-agent-id`
-header. No code changes. Its own API key passes through; the proxy never stores it.
+Agents point `ANTHROPIC_BASE_URL` at the spend proxy and identify themselves with an
+`x-agent-id` header. API keys pass through to Anthropic and are never stored or logged.
 
-## Numbers
+### How tool calls are enforced
 
-From [`evals/RESULTS.md`](evals/RESULTS.md) (fake Claude, $0: `.venv/bin/python evals/run_evals.py`) and
-one real-API run ([`evals/real_test_result.json`](evals/real_test_result.json), $0.098:
-`evals/real_claude_test.py`, which caps itself at $0.30 whatever the proxy does).
+Claude requests tools through structured `tool_use` blocks, never through free text, so
+enforcement is exact rather than heuristic. There are two enforcement points:
 
-| Eval | Target | Result |
+| | Spend proxy | Tool guard |
 |---|---|---|
-| **Real Claude Haiku 4.5**: runaway agent, $0.10 budget | stop at budget | **stopped at $0.098** after 11 real calls; the proxy's ledger matched the actual bill to the cent |
-| Runaway agent (fake Claude): $0.50 budget, loop worth $50 | stop at budget | **stopped at $0.48** (16 calls). Growing-cost loop: $0.48 |
-| Dangerous tool calls blocked (20 attacks × plain + streaming) | 100% | **40 / 40** |
-| Harmless tool calls wrongly blocked (10 × 2) | 0% | **0 / 20** |
-| Log tampering caught (7 attack types) | all | **7 / 7** with a saved chain head (5 / 7 by the chain alone) |
-| Latency added per call, p50 / p95 | < 20 ms | **1.3 / 1.5 ms**; first streamed byte **0.7 / 0.9 ms** |
+| **Sees** | Every `tool_use` block in Claude's responses, MCP or not | The actual MCP `tools/call` the agent executes |
+| **Enforces** | Denied calls are replaced with an explanation before the agent receives them; streamed tool calls are buffered until complete, then judged | Denied calls never reach the MCP server |
+| **Required for** | Tools defined in the agent's own code | Defense in depth for MCP tools |
 
-## Try it
+Allowed responses pass through unmodified; streaming responses remain byte-identical.
+
+## Results
+
+All figures are reproducible. The evaluation suite ([`evals/RESULTS.md`](evals/RESULTS.md))
+runs against a simulated Anthropic API at no cost; the real-API test
+([`evals/real_claude_test.py`](evals/real_claude_test.py)) enforces its own $0.30 ceiling
+independently of the proxy under test.
+
+| Evaluation | Target | Result |
+|---|---|---|
+| Runaway agent, **real Claude Haiku 4.5**, $0.10 budget | Stop at budget | **Stopped at $0.098** after 11 calls; proxy ledger matched actual usage exactly |
+| Runaway agent, simulated, $0.50 budget ($50 unsupervised) | Stop at budget | **Stopped at $0.48** (constant and growing per-call cost) |
+| Adversarial tool calls blocked (20 attacks, standard + streaming) | 100% | **40 / 40** |
+| Benign tool calls incorrectly blocked (10 cases, standard + streaming) | 0% | **0 / 20** |
+| Log tampering detected (7 attack classes) | All | **7 / 7** with anchor; 5 / 7 by chain alone |
+| Added latency, p50 / p95 | < 20 ms | **1.3 / 1.5 ms**; time to first streamed byte 0.7 / 0.9 ms |
+
+## Quick start
+
+Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 git clone https://github.com/divijm12/agent-audit-proxy && cd agent-audit-proxy
 uv sync --extra dev
-.venv/bin/shugo spend demo                              # live demo at :8787/dashboard
-.venv/bin/python examples/phase2/run_demo.py            # a runaway agent hits its budget
+.venv/bin/shugo spend demo            # local demo: http://127.0.0.1:8787/dashboard
 ```
 
-Real agents: `shugo spend serve -c spend.yaml`, then `ANTHROPIC_BASE_URL=http://127.0.0.1:8787`.
-Walkthroughs in [`examples/`](examples/); deployment (Fly.io, login) in [`docs/deploy.md`](docs/deploy.md).
+To govern real agents, start the spend proxy and point your agents at it:
 
-## Cost
+```bash
+.venv/bin/shugo spend serve -c spend.yaml
+```
 
-- **To run:** one small machine. The demo scales to zero on Fly.io when nobody's looking.
-- **Per call:** ~1.3 ms of added latency; no extra model calls.
-- **Pricing table:** Anthropic's published per-token rates, including cache reads/writes
-  ([`prices.yaml`](src/shugo/spend/prices.yaml)). Unknown models are refused by default rather than guessed.
+```python
+import anthropic
 
-## Failure modes and trade-offs
+client = anthropic.Anthropic(
+    base_url="http://127.0.0.1:8787",
+    default_headers={"x-agent-id": "support-bot"},
+)
+```
 
-- **Budgets are enforced before a call, but costs are only known after.** The proxy estimates
-  the next call from the agent's previous one. That's exact for loops, but an agent's very first call,
-  or a call much pricier than the last, can overshoot by that difference. Budgets are lifetime
-  totals (no daily reset yet).
-- **It only sees what passes through it.** If an agent's own code deletes a file without
-  Claude asking for it, no proxy can see that.
-- **Regex rules can be dodged; allow-lists can't.** The red-team policy allows a short list of
-  safe actions and denies the rest. The same person wrote the policy and the attacks, so 40/40
-  shows the mechanism works; it doesn't prove a determined attacker can't find a gap.
-- **The hash chain is tamper-*evident*, not tamper-proof.** Without a secret key, someone who
-  can edit the file can recompute every later hash or cut entries off the end. Saving the chain
-  head elsewhere (`shugo audit verify --anchor`) catches both.
-- **Blocked tool calls are rewritten into text.** Claude reads the reason and adapts. The newest models
-  (e.g. Opus 5.5) may reject a conversation whose history was edited; use `on_deny: error` for those.
-- **Single machine.** The spend ledger is SQLite; don't scale it horizontally.
+For Claude Code, set `ANTHROPIC_BASE_URL=http://127.0.0.1:8787` and
+`ANTHROPIC_CUSTOM_HEADERS="x-agent-id: coding-agent"`. For MCP tools, run the tool guard with
+`shugo serve --config guardrails.yaml` and register it in your client in place of the servers it wraps.
 
-## How it compares
+## Configuration
 
-LiteLLM, Portkey, Helicone and Bifrost give per-key budgets, logging and routing across many
-providers. Anthropic's Console has monthly spend limits per workspace, but not per agent. [agentguard](https://github.com/agentwares/agentguard)
-(TypeScript, Sept 2026) covers similar ground for MCP. This project's angle: one STOP button for
-**both** model and tool calls, rules applied to tool calls inside Claude's replies (not just MCP),
-per-agent budgets that stop a loop *before* it crosses the line, and an incident report with a
-verifiable log. It's Anthropic-only for now.
+`spend.yaml`: budgets, and policy for tool calls in model responses:
 
-## On compliance
+```yaml
+default_budget_usd: 5.00
+agents:
+  support-bot: {budget_usd: 20.00}
+  nightly-batch: {budget_usd: 2.00}
+unknown_model: deny          # refuse models missing from the price table
+tool_policy:
+  policy: guardrails.yaml
+  on_deny: rewrite           # or: error
+```
 
-Illinois' AI Safety Measures Act (SB 315, signed July 2026) gives **frontier model developers**
-72 hours to report a critical safety incident. It doesn't cover companies building on those
-models, but buyers are starting to ask them the same question. The export is modeled on that
-timeline; it is not a regulatory filing. Notes and sources: [`docs/illinois-sb315.md`](docs/illinois-sb315.md).
+`guardrails.yaml`: first matching rule wins; unmatched calls fall to the default:
 
-## Credits
+```yaml
+version: "0.1"
+defaults: {decision: deny}
+rules:
+  - id: no-recursive-delete
+    match: {server: api, tool: bash, args_regex: {command: 'rm\s+-\w*[rR]'}}
+    decision: deny
+    reason: Recursive deletes are prohibited.
+  - id: read-only-shell
+    match: {server: api, tool: bash, args_regex: {command: '^(ls|pwd|git (status|diff|log))( [\w./-]+)*$'}}
+    decision: allow
+```
 
-Built on [shugo](https://github.com/aritraghosh01/shugo) by aritraghosh01 (MIT): the MCP tool
-guard, policy engine, approvals and hash-chained log. Its original README is in
-[`docs/shugo-README.md`](docs/shugo-README.md). Fixes found here were sent upstream
+Operations: `shugo spend status`, `shugo halt` / `shugo unhalt`,
+`shugo audit report --hours 72 -o report.md`, `shugo audit verify --anchor <hash>`.
+More in [`examples/`](examples/) and the [policy guide](docs/policy-guide.md).
+
+## Deployment
+
+A `Dockerfile` and `fly.toml` are included. Internet-facing deployments require
+`SHUGO_DASHBOARD_PASSWORD` (the proxy refuses to bind a public interface without it) and should
+set `SHUGO_AGENT_TOKEN`. See [`docs/deploy.md`](docs/deploy.md).
+
+## Limitations
+
+- **Cost is known only after a call.** Budgets are enforced on an estimate derived from the
+  agent's previous call. This is exact for repetitive loops; the first call, or a call costlier
+  than its predecessor, can exceed the budget by at most the difference. Budgets are cumulative;
+  periodic resets are not yet supported.
+- **Visibility is limited to traffic through the proxy.** Actions an agent's code takes without
+  a model request, and agents that execute code written in free-text responses, are outside its
+  view. Anthropic-hosted tools (web search, code execution, the MCP connector) execute before the
+  response reaches the proxy and cannot be blocked by it.
+- **Policies are only as strong as their design.** Allow-lists are recommended over pattern
+  blocklists. The red-team policy and attacks share an author, so the 40/40 result validates the
+  mechanism rather than proving the absence of bypasses.
+- **The audit log is tamper-evident, not tamper-proof.** The hash chain is unkeyed; tail
+  truncation and full rewrites are detected only against an externally stored anchor (printed
+  in every incident report).
+- **Rewriting denied calls edits conversation history.** Models that reject edited history
+  should use `on_deny: error`.
+- **Single instance.** The spend ledger uses SQLite; horizontal scaling is not supported.
+- **Anthropic Messages API only.** Other providers are not yet supported.
+
+## Comparison
+
+| | Per-agent budgets | Tool-call policy | Kill switch (model + tools) | Verifiable audit trail |
+|---|---|---|---|---|
+| LiteLLM / Portkey / Helicone | Per key or team | Varies by product | Key revocation | Request logs |
+| Anthropic Console | Per workspace (monthly) | No | Key revocation | Usage reports |
+| [agentguard](https://github.com/agentwares/agentguard) | Per run / per day | MCP | Yes | Hash-chained |
+| **Agent Audit Proxy** | Yes, enforced pre-call | MCP and API-defined tools | Yes | Hash-chained, anchored, exportable |
+
+Gateways such as LiteLLM support many providers and routing, which this project does not.
+
+## Compliance context
+
+Illinois' Artificial Intelligence Safety Measures Act (SB 315, 2026) requires large frontier
+model developers to report critical safety incidents within 72 hours. It does not apply to
+companies deploying those models, but it signals the documentation enterprise customers will
+expect. The incident report follows that timeline; it is not a regulatory filing.
+See [`docs/illinois-sb315.md`](docs/illinois-sb315.md).
+
+## Acknowledgements and license
+
+Built on [shugo](https://github.com/aritraghosh01/shugo) by aritraghosh01 (MIT), which provides
+the MCP tool guard, policy engine, approvals and audit log; its original documentation is in
+[`docs/shugo-README.md`](docs/shugo-README.md). Fixes developed here were contributed upstream
 ([#13](https://github.com/aritraghosh01/shugo/pull/13), [#14](https://github.com/aritraghosh01/shugo/pull/14)).
-Spend limits inspired by [costfuse](https://github.com/costfuse/costfuse). MIT licensed.
+The spending-limit design was informed by [costfuse](https://github.com/costfuse/costfuse).
+
+Released under the [MIT License](LICENSE).
