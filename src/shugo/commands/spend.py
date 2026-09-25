@@ -3,9 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
+import yaml
+from pydantic import ValidationError
 from rich.console import Console
 from rich.table import Table
 
+from shugo.errors import ShugoError
 from shugo.spend.budget import BudgetStore
 from shugo.spend.config import SpendConfig, load_spend_config
 
@@ -14,7 +17,11 @@ def _config(path: Path, console: Console) -> SpendConfig:
     if not path.exists():
         console.print(f"[dim]no {path}; using defaults (upstream api.anthropic.com, $1.00/agent)[/dim]")
         return SpendConfig()
-    return load_spend_config(path)
+    try:
+        return load_spend_config(path)
+    except (ValidationError, yaml.YAMLError) as e:
+        console.print(f"[red]{path} is not valid:[/red]\n{e}")
+        raise typer.Exit(code=1)
 
 
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
@@ -41,11 +48,16 @@ def run_serve(config: Path, host: str, port: int, console: Console, no_login: bo
 
     refuse_open_internet(host, no_login, console)
     cfg = _config(config, console)
+    try:
+        app = create_app(cfg)
+    except ShugoError as e:  # e.g. tool_policy points at a guardrails.yaml that isn't there
+        console.print(f"[red]{e}[/red]\n(check `tool_policy.policy` in {config}; paths are relative to it)")
+        raise typer.Exit(code=1)
     console.print(
         f"spend proxy on [bold]http://{host}:{port}[/bold] -> {cfg.upstream}\n"
         f"point agents at it:  ANTHROPIC_BASE_URL=http://{host}:{port}  (name them with an x-agent-id header)"
     )
-    uvicorn.run(create_app(cfg), host=host, port=port, log_level="warning")
+    uvicorn.run(app, host=host, port=port, log_level="warning")
 
 
 def run_demo(host: str, port: int, console: Console) -> None:

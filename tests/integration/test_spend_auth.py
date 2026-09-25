@@ -60,3 +60,27 @@ def test_serve_refuses_the_open_internet_without_a_password(home, monkeypatch):
     monkeypatch.delenv("SHUGO_DASHBOARD_PASSWORD", raising=False)
     result = CliRunner().invoke(app, ["spend", "serve", "--host", "0.0.0.0"])
     assert result.exit_code == 2 and "refusing to listen" in result.output
+
+
+def test_serve_explains_a_missing_policy_file_instead_of_crashing(home, tmp_path):
+    from typer.testing import CliRunner
+
+    from shugo.cli import app
+
+    cfg = tmp_path / "spend.yaml"
+    cfg.write_text("tool_policy:\n  policy: guardrails.yaml\n")
+    result = CliRunner().invoke(app, ["spend", "serve", "-c", str(cfg)])
+    assert result.exit_code == 1
+    assert "policy file not found" in result.output and "tool_policy.policy" in result.output
+    assert "Traceback" not in result.output
+
+
+def test_serve_explains_an_invalid_config(home, tmp_path):
+    from typer.testing import CliRunner
+
+    from shugo.cli import app
+
+    cfg = tmp_path / "spend.yaml"
+    cfg.write_text("agents:\n  bot: {budget_usd: -5}\n")
+    result = CliRunner().invoke(app, ["spend", "serve", "-c", str(cfg)])
+    assert result.exit_code == 1 and "is not valid" in result.output

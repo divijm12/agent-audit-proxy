@@ -85,46 +85,58 @@ independently of the proxy under test.
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-git clone https://github.com/divijm12/agent-audit-proxy && cd agent-audit-proxy
-uv sync --extra dev
-.venv/bin/shugo spend demo            # local demo: http://127.0.0.1:8787/dashboard
+uv tool install git+https://github.com/divijm12/agent-audit-proxy
+shugo spend demo                     # simulated agents: http://127.0.0.1:8787/dashboard
 ```
 
-To govern real agents, start the spend proxy and point your agents at it:
+## Use it with your own agent
 
-```bash
-.venv/bin/shugo spend serve -c spend.yaml
-```
+Works with any agent that calls Claude through the Anthropic Messages API.
 
-```python
-import anthropic
-
-client = anthropic.Anthropic(
-    base_url="http://127.0.0.1:8787",
-    default_headers={"x-agent-id": "support-bot"},
-)
-```
-
-For Claude Code, set `ANTHROPIC_BASE_URL=http://127.0.0.1:8787` and
-`ANTHROPIC_CUSTOM_HEADERS="x-agent-id: coding-agent"`. For MCP tools, run the tool guard with
-`shugo serve --config guardrails.yaml` and register it in your client in place of the servers it wraps.
-
-## Configuration
-
-`spend.yaml`: budgets, and policy for tool calls in model responses:
+**1. Set budgets.** Create `spend.yaml`:
 
 ```yaml
-default_budget_usd: 5.00
+default_budget_usd: 5.00             # any agent not listed below
 agents:
   support-bot: {budget_usd: 20.00}
-  nightly-batch: {budget_usd: 2.00}
-unknown_model: deny          # refuse models missing from the price table
-tool_policy:
-  policy: guardrails.yaml
-  on_deny: rewrite           # or: error
 ```
 
-`guardrails.yaml`: first matching rule wins; unmatched calls fall to the default:
+**2. Start the proxy.**
+
+```bash
+shugo spend serve -c spend.yaml      # dashboard: http://127.0.0.1:8787/dashboard
+```
+
+**3. Point your agent at it.** This is the only change to your agent. Your API key is still
+yours and passes through to Anthropic unchanged. `x-agent-id` names the agent for budgets,
+the dashboard and the audit log; agents without it share the `default` budget.
+
+```python
+# Python SDK
+client = anthropic.Anthropic(base_url="http://127.0.0.1:8787",
+                             default_headers={"x-agent-id": "support-bot"})
+```
+
+```typescript
+// TypeScript SDK
+const client = new Anthropic({ baseURL: "http://127.0.0.1:8787",
+                               defaultHeaders: { "x-agent-id": "support-bot" } });
+```
+
+```bash
+# Claude Code and the Claude Agent SDK
+export ANTHROPIC_BASE_URL=http://127.0.0.1:8787
+export ANTHROPIC_CUSTOM_HEADERS="x-agent-id: coding-agent"
+```
+
+**4. Check it's working.** Run your agent, then open the dashboard or run `shugo spend status`:
+the agent appears with its spend. When it reaches its budget, its next call fails with a
+`402 billing_error` explaining why.
+
+### Optional: block dangerous tool calls
+
+Create `guardrails.yaml` next to `spend.yaml`. The first matching rule wins, and anything
+unmatched is denied:
 
 ```yaml
 version: "0.1"
@@ -139,9 +151,54 @@ rules:
     decision: allow
 ```
 
-Operations: `shugo spend status`, `shugo halt` / `shugo unhalt`,
-`shugo audit report --hours 72 -o report.md`, `shugo audit verify --anchor <hash>`.
-More in [`examples/`](examples/) and the [policy guide](docs/policy-guide.md).
+Then add to `spend.yaml` and restart the proxy:
+
+```yaml
+tool_policy:
+  policy: guardrails.yaml            # relative to spend.yaml
+  on_deny: rewrite                   # or: error
+```
+
+`server: api` refers to tools your agent defines in its own code; `tool` is the name Claude
+calls. A denied call is replaced with the reason before your agent receives it.
+
+### Optional: guard MCP tools
+
+List your MCP servers under `upstreams` in a `guardrails.yaml` (or generate one from your
+existing client config with `shugo init`):
+
+```yaml
+version: "0.1"
+defaults: {decision: deny}
+upstreams:
+  github:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-github"]
+rules:
+  - id: github-read-only
+    match: {server: github, tool: ["get_*", "list_*", "search_*"]}
+    decision: allow
+```
+
+Then register the guard in your MCP client (Claude Desktop, Claude Code, Cursor) in place of
+those servers. Their tools appear as `github__get_repo` and so on:
+
+```json
+{ "mcpServers": { "guarded": { "command": "shugo",
+                               "args": ["serve", "--config", "/absolute/path/to/guardrails.yaml"] } } }
+```
+
+Both proxies share one audit log and one kill switch (in `~/.shugo`) when they run on the same
+machine. Other commands: `shugo halt` / `shugo unhalt`, `shugo audit report --hours 72 -o report.md`,
+`shugo audit verify --anchor <hash>`, `shugo approve --watch`. More in [`examples/`](examples/) and
+the [policy guide](docs/policy-guide.md).
+
+## Contributing
+
+```bash
+git clone https://github.com/divijm12/agent-audit-proxy && cd agent-audit-proxy
+uv sync --extra dev && uv run --extra dev pytest
+```
 
 ## Deployment
 
