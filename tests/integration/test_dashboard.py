@@ -114,3 +114,11 @@ def test_cli_report(home, tmp_path):
     out = tmp_path / "r.md"
     result = CliRunner().invoke(app, ["audit", "report", "--hours", "24", "-o", str(out)])
     assert result.exit_code == 0 and out.read_text(encoding="utf-8").startswith("# Agent incident report — last 24 hours")
+
+
+def test_dashboard_has_link_preview_tags(home):
+    with _client(FakeAnthropic()) as c:
+        page = c.get("/dashboard").text
+    for tag in ('property="og:title"', 'property="og:description"', 'property="og:image"',
+                'name="twitter:card"', 'name="description"', 'rel="icon"'):
+        assert tag in page, tag

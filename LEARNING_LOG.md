@@ -237,9 +237,10 @@ background, still holding their ports, so the next run quietly talked to the
 
 ### Closing the gap: reading Claude's orders
 
-Some agents keep their tools in their own code (see "Way B" in our chat
-notes). Claude's reply says "run `bash` with `rm -rf /`" and the agent just
-does it. shugo never sees that, but the reply passes through the spend proxy.
+Agents use tools in one of two ways. Some reach them through MCP servers,
+which shugo guards. Others define the tools in their own code and simply run
+whatever Claude asks for: Claude's reply says "run `bash` with `rm -rf /`" and
+the agent just does it. shugo never sees that, but the reply passes through the spend proxy.
 So the spend proxy now reads every `tool_use` block in Claude's replies and
 checks it against the *same* rules file shugo uses:
 
@@ -360,7 +361,7 @@ will do the real build.
 
 ---
 
-## Phase 5 (part 2) — The real test, and a leaked key (2026-09-25)
+## Phase 5 (part 2) — The real test (2026-09-25)
 
 ### Ten cents of proof
 
@@ -381,12 +382,12 @@ on a guess, so it now assumes the true worst case, one token per character,
 which can't be exceeded for plain text. Then we rehearsed the whole run against
 the fake Claude before spending a cent.
 
-### When a secret ends up in the chat
+### Keeping the API key out of everything
 
-An API key got pasted into the conversation. Once a secret has been written
-somewhere it shouldn't be (a chat, a commit, a screenshot), the only safe
-assumption is that it's leaked. So: revoke it, make a new one, and hand the new
-one over through a channel that doesn't record it: a private `.env` file
-(readable only by you, and listed in `.gitignore` so git will never upload it).
-We checked the file was private, ignored by git and a *different* key, without
-ever printing the key itself.
+The real test needs a real API key, and a key must never end up in the code,
+the git history, a log or a screenshot. It lives in a private `.env` file:
+readable only by its owner, and listed in `.gitignore` so git will never upload
+it. The test script reads it from there and never prints it; the setup was
+checked (private, ignored by git) without ever displaying the key. And the rule
+for any secret that does land somewhere it shouldn't (a chat, a commit, a
+screenshot): assume it's leaked, revoke it, and make a new one.
