@@ -70,9 +70,10 @@ def test_serve_explains_a_missing_policy_file_instead_of_crashing(home, tmp_path
     cfg = tmp_path / "spend.yaml"
     cfg.write_text("tool_policy:\n  policy: guardrails.yaml\n")
     result = CliRunner().invoke(app, ["spend", "serve", "-c", str(cfg)])
+    out = " ".join(result.output.split())  # the console wraps long paths
     assert result.exit_code == 1
-    assert "policy file not found" in result.output and "tool_policy.policy" in result.output
-    assert "Traceback" not in result.output
+    assert "policy file not found" in out and "tool_policy.policy" in out
+    assert "Traceback" not in out
 
 
 def test_serve_explains_an_invalid_config(home, tmp_path):
@@ -83,4 +84,5 @@ def test_serve_explains_an_invalid_config(home, tmp_path):
     cfg = tmp_path / "spend.yaml"
     cfg.write_text("agents:\n  bot: {budget_usd: -5}\n")
     result = CliRunner().invoke(app, ["spend", "serve", "-c", str(cfg)])
-    assert result.exit_code == 1 and "is not valid" in result.output
+    out = " ".join(result.output.split())  # the console wraps long paths
+    assert result.exit_code == 1 and "is not valid" in out
