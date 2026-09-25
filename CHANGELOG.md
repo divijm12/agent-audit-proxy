@@ -1,6 +1,35 @@
 # Changelog
 
-All notable changes to SHUGO will be documented here. This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes are documented here. This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Versions up to 0.1.0 are upstream [shugo](https://github.com/aritraghosh01/shugo); 0.2.0 onward is Agent Audit Proxy.
+
+## [0.2.0] — 2026-09-25
+
+### Added
+- **Spend proxy** (`shugo spend serve`): Anthropic-compatible `/v1/messages` passthrough with per-agent
+  budgets (SQLite ledger, in-flight reservations, estimate from the agent's previous call), pricing from
+  published per-token rates incl. cache reads/writes, streaming relayed unchanged; `spend status | reset`.
+- **Tool policy on model responses** (`tool_policy` in `spend.yaml`): `tool_use` blocks judged against
+  `guardrails.yaml`; denied calls rewritten to an explanation or refused; `escalate` waits for approval;
+  streamed tool calls buffered until complete.
+- **Policy `args_regex`**: regex matching inside tool arguments (dotted paths or `*`).
+- **Dashboard** (`/dashboard`): STOP/RESUME, per-agent spend, recent audit entries, incident export.
+- **Incident reports**: `GET /export?hours=N`, `shugo audit report`; integrity check and chain head.
+- **Kill switch** shared by the tool guard and spend proxy; every halt/resume is audited.
+- **`shugo audit verify --anchor`** detects tail truncation and full rewrites.
+- **Live demo** (`shugo spend demo`), Dockerfile, `fly.toml`, optional login
+  (`SHUGO_DASHBOARD_PASSWORD`, `SHUGO_AGENT_TOKEN`).
+- **Evaluations** (`evals/`): runaway, red team, tamper, latency; one real-API run.
+
+### Fixed
+- Proxy forwarded only `result.content`, dropping `structuredContent` and failing allowed calls to tools
+  with an `outputSchema` (sent upstream as shugo#14).
+- Audit log is safe for multiple writer processes (file lock; head re-read on append).
+- CI: committed `uv.lock`, install via `uv sync`; date- and terminal-dependent tests (sent upstream as shugo#13).
+- Streaming relay forwards decoded bytes (compressed streams previously reached agents undecoded).
+
+### Removed
+- PyPI release workflow (publishes upstream `shugo`; not applicable to this repository).
 
 ## [0.1.0] — 2026-07-30
 

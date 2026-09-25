@@ -39,3 +39,11 @@ def isolated_home(tmp_path, monkeypatch):
     home.mkdir()
     monkeypatch.setenv("SHUGO_HOME", str(home))
     return home
+
+
+@pytest.fixture
+def home(tmp_path, monkeypatch):
+    """SHUGO_HOME for the spend-proxy tests (the directory is created on first use)."""
+    h = tmp_path / "shugo-home"
+    monkeypatch.setenv("SHUGO_HOME", str(h))
+    return h

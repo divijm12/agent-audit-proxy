@@ -69,13 +69,6 @@ class FakeAnthropic:
         return httpx.Response(200, json=_message(body["model"]))
 
 
-@pytest.fixture
-def home(tmp_path, monkeypatch):
-    h = tmp_path / "shugo-home"
-    monkeypatch.setenv("SHUGO_HOME", str(h))
-    return h
-
-
 def _client(fake, **cfg):
     cfg.setdefault("db_path", ":memory:")
     app = create_app(SpendConfig(upstream="https://fake.anthropic", **cfg),

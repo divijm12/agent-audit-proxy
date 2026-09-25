@@ -1,3 +1,5 @@
+> This is the original README of [shugo](https://github.com/aritraghosh01/shugo), the MCP tool guard this project builds on, kept for reference. For Agent Audit Proxy, see the [main README](../README.md).
+
 <div align="center">
 
 <img src="../assets/shugo-banner.png" alt="SHUGO — /shoo-go/ · noun · Japanese · guardian / protection. Minimal guardrails framework, fully modular, teaches you to govern agents." width="900">
@@ -14,7 +16,7 @@
 <a href="../LICENSE"><img src="https://img.shields.io/badge/License-MIT-A03A26?style=flat-square" alt="MIT License"></a>
 <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-native-0E1A2B?style=flat-square" alt="MCP native"></a>
 <a href="https://github.com/aritraghosh01/shugo/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/release-v0.1.0-1F6F4A?style=flat-square" alt="Release v0.1.0"></a>
-<a href="../CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-1F6F4A?style=flat-square" alt="PRs welcome"></a>
+<a href="https://github.com/aritraghosh01/shugo"><img src="https://img.shields.io/badge/PRs-welcome-1F6F4A?style=flat-square" alt="PRs welcome"></a>
 
 <br><br>
 
@@ -264,13 +266,13 @@ SHUGO is built in public, and the contribution ladder is deliberately low to the
 
 **policy pack → scenario test → framework mapping → core**
 
-A new policy pack is a self-contained YAML file. You do not need to read the codebase to ship one. Start with [`CONTRIBUTING.md`](../CONTRIBUTING.md) and the [good first issues](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+A new policy pack is a self-contained YAML file. You do not need to read the codebase to ship one. Start with the [upstream repository](https://github.com/aritraghosh01/shugo) and its [good first issues](https://github.com/aritraghosh01/shugo/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 ---
 
 ## 📄 License
 
-Released under the [MIT License](LICENSE). Use it, fork it, adapt it to your own agent architecture — that is the point.
+Released under the [MIT License](../LICENSE). Use it, fork it, adapt it to your own agent architecture — that is the point.
 
 ---
 

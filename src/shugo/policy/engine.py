@@ -108,13 +108,13 @@ def _match_args_regex(spec: dict[str, str] | None, actual: dict[str, Any]) -> bo
     """Every field's regex must be found (re.search) in that field's string value."""
     if spec is None:
         return True
-    for field, pattern in spec.items():
+    for path, pattern in spec.items():
         rx = _compiled(pattern)
-        if field == "*":
+        if path == "*":
             if not any(rx.search(s) for s in _strings(actual)):
                 return False
         else:
-            value = _field(actual, field)
+            value = _field(actual, path)
             if not isinstance(value, str) or not rx.search(value):
                 return False
     return True

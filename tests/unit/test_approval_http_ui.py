@@ -1,7 +1,6 @@
 import json
 
 import pytest
-from aiohttp.test_utils import AioHTTPTestCase, TestClient, TestServer
 
 from shugo.approval.http_ui import build_app
 

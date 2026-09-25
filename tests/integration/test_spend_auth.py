@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from shugo.spend.config import SpendConfig
 from shugo.spend.server import create_app
 
-from .test_spend_proxy import FakeAnthropic, _post, home  # noqa: F401  (fixture)
+from .test_spend_proxy import FakeAnthropic, _post
 
 
 def _client(fake):

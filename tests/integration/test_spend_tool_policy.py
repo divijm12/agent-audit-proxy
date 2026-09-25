@@ -12,7 +12,6 @@ from shugo.audit.verify import verify_log
 from shugo.spend.config import SpendConfig, ToolPolicy
 from shugo.spend.server import create_app
 
-from .test_spend_proxy import home  # noqa: F401  (fixture)
 
 POLICY = r"""
 version: "0.1"

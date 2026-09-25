@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shugo"
-version = "0.1.0"
-description = "Minimal MCP guardrails proxy — policy-first, human approvals, hash-chained audit log."
+version = "0.2.0"
+description = "Agent Audit Proxy: per-agent spend limits, tool-call policy, kill switch and hash-chained audit log for Claude agents (built on shugo)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "aritraghosh01" }]
+authors = [{ name = "aritraghosh01" }, { name = "divijm12" }]
 keywords = ["mcp", "guardrails", "ai-safety", "agent", "policy", "audit"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -37,9 +37,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/aritraghosh01/shugo"
-Repository = "https://github.com/aritraghosh01/shugo"
-Issues = "https://github.com/aritraghosh01/shugo/issues"
+Homepage = "https://github.com/divijm12/agent-audit-proxy"
+Repository = "https://github.com/divijm12/agent-audit-proxy"
+Issues = "https://github.com/divijm12/agent-audit-proxy/issues"
+Demo = "https://agent-audit-proxy-demo.fly.dev/dashboard"
+Upstream = "https://github.com/aritraghosh01/shugo"
 
 [project.scripts]
 shugo = "shugo.cli:app"

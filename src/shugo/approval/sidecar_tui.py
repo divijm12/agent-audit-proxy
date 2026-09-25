@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from pathlib import Path
 
 from rich.console import Console
 from rich.prompt import Prompt
