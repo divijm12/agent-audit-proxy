@@ -88,6 +88,7 @@ file) and write to the same audit log.
      self-contained live demo (fake Claude, looping agents, resets). Dockerfile
      (demo by default) + fly.toml + docs/deploy.md; image steps checked locally
      without Docker.
-   - Waiting on the owner: Fly.io account + `fly auth login`, then `fly deploy`;
-     the **one real Claude Haiku 4.5 run capped at $0.30 total** (agent budget ~$0.10),
+   - Done (2026-09-25): live demo deployed to https://agent-audit-proxy-demo.fly.dev
+     (one machine, scales to zero; STOP/RESUME, export and HTTPS redirect checked live).
+   - Waiting on the owner: the **one real Claude Haiku 4.5 run capped at $0.30 total** (agent budget ~$0.10),
      after showing the exact plan; then make the repo public; demo video.

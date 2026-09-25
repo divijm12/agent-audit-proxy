@@ -6,8 +6,9 @@ hands you a report of exactly what they did.
 
 ![Dashboard: per-agent spend bars, STOP button, live audit trail](docs/img/dashboard.jpg)
 
-> **Live demo:** coming soon (a free demo with a pretend Claude: press STOP, watch it hold).
-> Run it yourself in one line: `shugo spend demo`.
+> **Live demo: [agent-audit-proxy-demo.fly.dev/dashboard](https://agent-audit-proxy-demo.fly.dev/dashboard)**
+> A pretend Claude and three pretend agents, no real money. Press STOP, watch them get blocked,
+> export the report. Resets every 5 minutes (the first visit may take a few seconds to wake it).
 
 ## The problem
 
