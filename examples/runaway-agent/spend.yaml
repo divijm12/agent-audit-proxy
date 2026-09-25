@@ -1,4 +1,4 @@
-# Phase 2 demo config. Upstream is the local fake API, so no real money moves.
+# Runaway-agent demo config. Upstream is the local fake API, so no real money moves.
 upstream: http://127.0.0.1:8788
 default_budget_usd: 1.00
 agents:

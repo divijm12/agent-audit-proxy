@@ -3,7 +3,7 @@
 SHUGO turns the hash-chained audit log into a control-mapped evidence bundle you can hand to a risk lead, auditor, or CI job.
 
 ```bash
-uvx shugo evidence -f owasp-llm -s 30d -o evidence/
+shugo evidence -f owasp-llm -s 30d -o evidence/
 ```
 
 Available frameworks:

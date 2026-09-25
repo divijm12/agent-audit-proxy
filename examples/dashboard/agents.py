@@ -1,6 +1,6 @@
 """Agents that keep calling Claude through the proxy, once a second each.
 
-Unlike the Phase 2 agent they don't give up when refused, so you can watch
+Unlike the runaway-agent example they don't give up when refused, so you can watch
 STOP block them and RESUME let them continue.
 """
 import argparse

@@ -1,9 +1,9 @@
-# Phase 3 demo: the dashboard and the big red button
+# Dashboard: the kill switch and live spend
 
-Local and free (uses the Phase 2 fake Anthropic API).
+Local and free (uses the fake Anthropic API from `examples/runaway-agent`).
 
 ```bash
-.venv/bin/python examples/phase3/run_demo.py
+.venv/bin/python examples/dashboard/run_demo.py
 ```
 
 This opens **http://127.0.0.1:8787/dashboard** and starts two agents that each
@@ -25,4 +25,4 @@ The same STOP also freezes the tool guard (`shugo serve`): both read one
 button does, and are logged the same way.
 
 **Local only.** Anyone who can open the page can press STOP, so the proxy
-listens on 127.0.0.1 by default. A login comes before it's deployed (Phase 5).
+listens on 127.0.0.1 by default. For internet-facing use, set a dashboard password (see [`docs/deploy.md`](../../docs/deploy.md)).

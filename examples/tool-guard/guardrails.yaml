@@ -1,4 +1,4 @@
-# Policy for the Phase 1 demo. Read top to bottom: first matching rule wins,
+# Policy for the tool-guard example. Read top to bottom: first matching rule wins,
 # and anything no rule matches is denied (defaults.decision).
 version: "0.1"
 
@@ -10,7 +10,7 @@ upstreams:
   demo:
     # Relative to where you run `shugo serve` (run from the repo root).
     command: .venv/bin/python
-    args: ["examples/phase1/demo_tools_server.py"]
+    args: ["examples/tool-guard/demo_tools_server.py"]
     env: {}
 
 rules:

@@ -1,4 +1,4 @@
-# Phase 2 demo: a runaway agent hits its budget
+# Runaway agent: stopped at its budget
 
 Local and free: the "Anthropic API" here is `fake_anthropic.py`, and the agent
 uses a fake key. Nothing reaches api.anthropic.com.
@@ -11,8 +11,8 @@ uses a fake key. Nothing reaches api.anthropic.com.
 | `run_demo.py` | Starts the fake API + `shugo spend serve`, runs the agent, prints status and the audit log. |
 
 ```bash
-.venv/bin/python examples/phase2/run_demo.py            # plain calls
-.venv/bin/python examples/phase2/run_demo.py --stream   # streaming calls
+.venv/bin/python examples/runaway-agent/run_demo.py            # plain calls
+.venv/bin/python examples/runaway-agent/run_demo.py --stream   # streaming calls
 ```
 
 Expected:

@@ -1,27 +1,23 @@
-# Quickstart
+# Tool guard quickstart
 
-SHUGO stands in front of your MCP servers, evaluates a YAML policy on every `tools/call`, and records every decision to a tamper-evident audit log. This guide gets you from zero to guarded in under five minutes.
+The tool guard (`shugo serve`) stands in front of your MCP servers, evaluates a YAML policy on every `tools/call`, and records every decision to a tamper-evident audit log. This guide gets you from zero to guarded in under five minutes.
 
 ## 1. Install
 
 ```bash
-uvx shugo --version
+uv tool install git+https://github.com/divijm12/agent-audit-proxy
+shugo --version
 ```
 
-`uvx` (from Astral's `uv`) creates a throwaway venv and runs `shugo` from PyPI — no global install needed. If you prefer a persistent install:
-
-```bash
-uv tool install shugo
-# or
-pipx install shugo
-```
+This installs this repository's `shugo` (the tool guard plus the spend proxy). The older
+`shugo` package on PyPI is the upstream project and lacks the fixes and features here.
 
 ## 2. Scaffold a policy
 
 Point `shugo init` at your MCP client config (Claude Desktop / Claude Code / Cursor / VS Code). If you don't pass `--from`, SHUGO searches the standard locations for your OS.
 
 ```bash
-uvx shugo init
+shugo init
 ```
 
 This writes `./guardrails.yaml` with:
@@ -40,21 +36,21 @@ Restart Claude Desktop / Cursor / VS Code / Claude Code so it picks up the new c
 Escalated calls block until you decide. Run the sidecar in a second terminal:
 
 ```bash
-uvx shugo approve --watch          # TUI
+shugo approve --watch          # TUI
 ```
 
 or open the browser UI:
 
 ```bash
-uvx shugo serve --approvals both   # start the proxy with the HTTP UI enabled
+shugo serve --approvals both   # start the proxy with the HTTP UI enabled
 # then open http://127.0.0.1:6247
 ```
 
 ## 5. Verify the audit trail
 
 ```bash
-uvx shugo audit tail -n 20
-uvx shugo audit verify
+shugo audit tail -n 20
+shugo audit verify
 ```
 
 `audit verify` recomputes the SHA-256 hash chain over `~/.shugo/audit.log` and exits non-zero if any line has been tampered with.
@@ -62,7 +58,7 @@ uvx shugo audit verify
 ## 6. Generate evidence
 
 ```bash
-uvx shugo evidence -f owasp-llm -s 30d -o evidence/
+shugo evidence -f owasp-llm -s 30d -o evidence/
 ```
 
 Produces a control-by-control report of which rules fired, how many approvals happened, and where you have coverage gaps.
@@ -70,6 +66,6 @@ Produces a control-by-control report of which rules fired, how many approvals ha
 ## Kill switch
 
 ```bash
-uvx shugo halt      # deny all calls until unhalt
-uvx shugo unhalt
+shugo halt      # deny all calls until unhalt
+shugo unhalt
 ```

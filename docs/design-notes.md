@@ -1,7 +1,8 @@
-# Agent Audit Proxy — build plan
+# Design notes
 
-Source: the 9-day roadmap PDF (Phases 1–5). This file records where we deviate
-from it and why. Decided with the project owner on 2026-09-22.
+How Agent Audit Proxy was built: the architecture chosen, where it deliberately
+departs from the original five-phase, nine-day roadmap it started from, and what
+each phase delivered. Decisions were made on 2026-09-22 unless dated otherwise.
 
 ## Architecture (option a)
 
@@ -25,9 +26,9 @@ shugo only sees tool calls, never model calls, so it cannot know what anything
 costs. The spend proxy fills that gap. Both share the kill switch (shugo's `HALT`
 file) and write to the same audit log.
 
-## Changes from the PDF
+## Changes from the original roadmap
 
-| PDF says | We do | Why |
+| Roadmap said | We did | Why |
 |---|---|---|
 | Single FastAPI app in `app/` handling everything | shugo (`src/shugo/`) for tools + a new spend proxy for model calls | shugo is an MCP stdio guard, not an HTTP server |
 | LiteLLM, OpenAI + Anthropic | Anthropic only, plain passthrough; OpenAI is "coming soon" | One less dependency; the demo uses Claude |
@@ -41,14 +42,14 @@ file) and write to the same audit log.
 
 ## Phases
 
-1. **Done (2026-09-22).** shugo runs locally; `examples/phase1/` sends allow / deny /
+1. **Done (2026-09-22).** shugo runs locally; `examples/tool-guard/` sends allow / deny /
    escalate calls through it; audit log verifies; tampering is detected. Fixed two
    upstream issues on the way (see LEARNING_LOG.md).
 2. **Done (2026-09-22). Spend proxy + budget.** `shugo spend serve`: FastAPI
    `/v1/messages` passthrough (streaming bytes relayed untouched; usage read from
    `message_start` / `message_delta`), SQLite ledger per agent, pre-flight budget
    check with in-flight reservations, cost rows in the shared audit log (now safe
-   for multiple writer processes). `examples/phase2/`: a runaway SDK agent with a
+   for multiple writer processes). `examples/runaway-agent/`: a runaway SDK agent with a
    $0.10 budget is stopped at $0.09. Fake upstream only — no paid calls.
 
    How a call is judged: kill switch (403 `permission_error`) → model must be in
@@ -80,7 +81,7 @@ file) and write to the same audit log.
    - Found on the way: stream relay forwarded compressed bytes without their header
      (fixed: relay decoded bytes).
    - README still to be rewritten with these numbers (Phase 5).
-5. **In progress. Deploy + README.**
+5. **Done (2026-09-25). Deploy + README.**
    - Done (2026-09-24): README rewritten as a product spec (problem, diagram, eval
      numbers, cost, failure modes, comparison; shugo's README kept in
      docs/shugo-README.md). Login for internet-facing use (dashboard password,
@@ -93,4 +94,4 @@ file) and write to the same audit log.
    - Done (2026-09-25): the one real-API test. Claude Haiku 4.5, agent budget $0.10,
      script hard cap $0.30: 11 real calls, stopped by the proxy at $0.09807; the proxy's
      ledger equalled the script's independent total; audit chain OK. Total spent: $0.098.
-   - Waiting on the owner: make the repo public; demo video.
+   - Done (2026-09-25): repository made public (v0.2.0).

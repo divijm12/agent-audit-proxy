@@ -21,7 +21,7 @@ File moves are atomic (`os.replace`), so double-approve is naturally resolved â€
 In a second terminal:
 
 ```bash
-uvx shugo approve --watch
+shugo approve --watch
 ```
 
 The TUI polls `pending/` and prompts you per request. Keybindings: `a` approve, `d` deny, `s` skip.
@@ -29,8 +29,8 @@ The TUI polls `pending/` and prompts you per request. Keybindings: `a` approve, 
 ## One-shot CLI
 
 ```bash
-uvx shugo approve <request-id>
-uvx shugo deny    <request-id> --note "not the right scope"
+shugo approve <request-id>
+shugo deny    <request-id> --note "not the right scope"
 ```
 
 Useful for scripts and CI-style approvals.
@@ -38,9 +38,9 @@ Useful for scripts and CI-style approvals.
 ## HTTP UI (opt-in)
 
 ```bash
-uvx shugo serve --approvals http               # HTTP UI only
-uvx shugo serve --approvals both               # TUI + HTTP UI
-uvx shugo serve --approvals both --approvals-port 6247
+shugo serve --approvals http               # HTTP UI only
+shugo serve --approvals both               # TUI + HTTP UI
+shugo serve --approvals both --approvals-port 6247
 ```
 
 Open <http://127.0.0.1:6247> â€” a single-page UI polls `/api/pending` every second and lets you Approve / Deny each request. Bound to `127.0.0.1` only; no authentication is applied because this is a local, single-user tool. Do not expose the port.
@@ -59,7 +59,7 @@ Timeouts move the pending file to `~/.shugo/timeout/` for audit.
 ## Kill switch
 
 ```bash
-uvx shugo halt
+shugo halt
 ```
 
 Writes `~/.shugo/HALT`. Every subsequent `tools/call` is denied immediately, before policy evaluation. `shugo unhalt` clears it.

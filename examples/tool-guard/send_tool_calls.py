@@ -1,7 +1,7 @@
 """Act like an agent: connect to shugo and send a few tool calls through it.
 
 Run from the repo root:
-    SHUGO_HOME=examples/phase1/.shugo-home .venv/bin/python examples/phase1/send_tool_calls.py
+    SHUGO_HOME=examples/tool-guard/.shugo-home .venv/bin/python examples/tool-guard/send_tool_calls.py
 """
 import asyncio
 import os
@@ -12,7 +12,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 SHUGO = StdioServerParameters(
     command=os.path.join(os.path.dirname(sys.executable), "shugo"),
-    args=["serve", "--config", "examples/phase1/guardrails.yaml"],
+    args=["serve", "--config", "examples/tool-guard/guardrails.yaml"],
     env={**os.environ},
 )
 

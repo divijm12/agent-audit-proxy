@@ -75,7 +75,7 @@ process (including our future spend proxy and dashboard) can flip it.
 
 shugo sees tool calls, never model calls. It has no idea how many tokens an agent
 used or what it cost. So a spending limit can't live inside shugo — it needs a
-second, small proxy in front of the Anthropic API. See `docs/plan.md`.
+second, small proxy in front of the Anthropic API. See `docs/design-notes.md`.
 
 ---
 
@@ -156,7 +156,7 @@ spent, with the last call costing $0.03, the next one would reach $0.12, so it's
 refused. The agent stops at **$0.09**, under the limit. Honest limits: an
 agent's very first call has no history, and a call much pricier than the one
 before can still overshoot by the difference. Those are written down in
-`docs/plan.md` rather than hidden.
+`docs/design-notes.md` rather than hidden.
 
 ### Two agents calling at once
 

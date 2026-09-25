@@ -1,4 +1,4 @@
-# Phase 1 demo: one agent, three tool calls, one audit log
+# Tool guard: one agent, three tool calls, one audit log
 
 Everything here is local and free — no API keys, no network, no real files touched.
 
@@ -11,8 +11,8 @@ Everything here is local and free — no API keys, no network, no real files tou
 Run from the repo root:
 
 ```bash
-export SHUGO_HOME=examples/phase1/.shugo-home   # keep the demo's log out of ~/.shugo
-.venv/bin/python examples/phase1/send_tool_calls.py
+export SHUGO_HOME=examples/tool-guard/.shugo-home   # keep the demo's log out of ~/.shugo
+.venv/bin/python examples/tool-guard/send_tool_calls.py
 .venv/bin/shugo audit tail -n 5
 .venv/bin/shugo audit verify
 ```
@@ -24,9 +24,9 @@ demo__read_file   -> OK: (pretend contents of notes.txt)
 demo__delete_file -> ERROR: Deleting files is prohibited for autonomous agents.
 demo__bash        -> ERROR: approval timed out after 5s (on_timeout=deny)
 ...
-OK examples/phase1/.shugo-home/audit.log: 3 entries verified
+OK examples/tool-guard/.shugo-home/audit.log: 3 entries verified
 ```
 
 To approve the `bash` call instead of letting it time out, run
-`SHUGO_HOME=examples/phase1/.shugo-home .venv/bin/shugo approve --watch` in a second
+`SHUGO_HOME=examples/tool-guard/.shugo-home .venv/bin/shugo approve --watch` in a second
 terminal first (and raise `timeout_seconds` in `guardrails.yaml`).

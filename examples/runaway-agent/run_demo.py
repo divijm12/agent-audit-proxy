@@ -1,6 +1,6 @@
 """Start the fake API and the spend proxy, run the runaway agent, show the result.
 
-Run from the repo root:  .venv/bin/python examples/phase2/run_demo.py [--stream]
+Run from the repo root:  .venv/bin/python examples/runaway-agent/run_demo.py [--stream]
 """
 import functools
 import os

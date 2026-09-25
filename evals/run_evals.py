@@ -213,7 +213,7 @@ def latency(n: int = 400, warmup: int = 50) -> dict:
     env.pop("FORCE_COLOR", None)
     bin_dir = Path(sys.executable).parent
     servers = [
-        subprocess.Popen([sys.executable, str(ROOT / "examples/phase2/fake_anthropic.py"), "18788"], env=env),
+        subprocess.Popen([sys.executable, str(ROOT / "examples/runaway-agent/fake_anthropic.py"), "18788"], env=env),
         subprocess.Popen([str(bin_dir / "shugo"), "spend", "serve", "-c", str(cfg), "--port", "18787"],
                          env=env, stdout=subprocess.DEVNULL),
     ]

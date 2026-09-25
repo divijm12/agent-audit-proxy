@@ -1,6 +1,6 @@
 """Start the fake API + spend proxy, open the dashboard, and run two agents.
 
-Run from the repo root:  .venv/bin/python examples/phase3/run_demo.py
+Run from the repo root:  .venv/bin/python examples/dashboard/run_demo.py
 Then click STOP in the browser and watch the agents get blocked. Ctrl+C to quit.
 """
 import os
@@ -35,7 +35,7 @@ def wait_for(url: str) -> None:
 signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
 shutil.rmtree(HOME, ignore_errors=True)
 servers = [
-    subprocess.Popen([sys.executable, str(HERE.parent / "phase2" / "fake_anthropic.py"), "8788"], env=env),
+    subprocess.Popen([sys.executable, str(HERE.parent / "runaway-agent" / "fake_anthropic.py"), "8788"], env=env),
     subprocess.Popen([str(BIN / "shugo"), "spend", "serve", "-c", str(HERE / "spend.yaml")],
                      env=env, stdout=subprocess.DEVNULL),
 ]
