@@ -1,0 +1,11 @@
+.git
+.github
+.venv
+**/__pycache__
+**/.shugo-home
+**/.DS_Store
+*.log.lock
+tests
+examples
+evals
+docs
