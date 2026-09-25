@@ -80,6 +80,9 @@ independently of the proxy under test.
 | Log tampering detected (7 attack classes) | All | **7 / 7** with anchor; 5 / 7 by chain alone |
 | Added latency, p50 / p95 | < 20 ms | **1.3 / 1.5 ms**; time to first streamed byte 0.7 / 0.9 ms |
 
+Latency depends on the machine and its load: across repeated runs on an Apple-silicon laptop,
+the added p50 ranged from 1.3 to 2.1 ms. All other figures are deterministic.
+
 ## Quick start
 
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
