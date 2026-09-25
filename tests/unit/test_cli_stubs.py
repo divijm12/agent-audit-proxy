@@ -28,3 +28,14 @@ def test_audit_subgroup_has_tail_and_verify():
 def test_serve_missing_config_exits_1(tmp_path):
     result = runner.invoke(app, ["serve", "--config", str(tmp_path / "nope.yaml")])
     assert result.exit_code == 1
+
+
+def test_version_matches_the_package_metadata():
+    from importlib.metadata import version
+
+    from typer.testing import CliRunner
+
+    from shugo.cli import app
+
+    result = CliRunner().invoke(app, ["--version"])
+    assert result.exit_code == 0 and version("shugo") in result.output
